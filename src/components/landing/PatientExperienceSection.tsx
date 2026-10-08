@@ -14,16 +14,16 @@ const features = [
   { icon: ListTodo, label: 'What do I need to do next?' },
   { icon: CalendarCheck, label: 'Upcoming appointments' },
   { icon: TestTubes, label: 'Tests & lab orders' },
-  { icon: Forward, label: 'Referrals' },
-  { icon: FileHeart, label: 'Care instructions' },
-  { icon: Clock, label: 'Follow-up timeline' },
-  { icon: Bell, label: 'Reminder history' },
-  { icon: Languages, label: 'Language selection' },
+  { icon: Forward, label: 'Referrals & specialist visits' },
+  { icon: FileHeart, label: 'Patient care instructions' },
+  { icon: Clock, label: 'Post-discharge timeline' },
+  { icon: Bell, label: 'Reminder call history' },
+  { icon: Languages, label: 'Language selection (EN, TA, HI)' },
 ];
 
 export function PatientExperienceSection() {
   return (
-    <section id="for-patients" className="py-20 sm:py-28">
+    <section id="for-patients" className="py-20 sm:py-28 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
           {/* Text */}
@@ -33,19 +33,18 @@ export function PatientExperienceSection() {
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-sm font-semibold text-primary-600 uppercase tracking-wider mb-3">
-              For Patients
+            <p className="text-xs font-bold text-teal-800 uppercase tracking-widest mb-3">
+              Patient Recovery Experience
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-text-primary tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
               Clear, Simple Follow-up — In Your Language
             </h2>
-            <p className="mt-4 text-text-secondary text-lg leading-relaxed">
+            <p className="mt-4 text-slate-600 text-base sm:text-lg leading-relaxed">
               After discharge, patients see exactly what they need to do next — appointments,
-              tests, medications, and care instructions — all in one place, in clear language.
+              tests, medications, and care instructions — organized in plain language without medical jargon.
             </p>
-            <p className="mt-3 text-text-secondary leading-relaxed">
-              Items that need additional information are clearly marked, and the care team
-              is notified to follow up.
+            <p className="mt-3 text-slate-600 leading-relaxed text-sm">
+              Items with missing or ambiguous details are visibly flagged as "Needs Review" while your care coordinator resolves them behind the scenes.
             </p>
           </motion.div>
 
@@ -64,11 +63,11 @@ export function PatientExperienceSection() {
                   initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.3, delay: 0.3 + i * 0.05 }}
-                  className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-border hover:border-primary-200 hover:shadow-sm transition-all"
+                  transition={{ duration: 0.25, delay: 0.2 + i * 0.04 }}
+                  className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-teal-800/30 hover:bg-slate-100 transition-all"
                 >
-                  <f.icon className="w-5 h-5 text-primary-500 shrink-0" />
-                  <span className="text-sm font-medium text-text-primary">{f.label}</span>
+                  <f.icon className="w-5 h-5 text-teal-800 shrink-0" />
+                  <span className="text-xs font-bold text-slate-900">{f.label}</span>
                 </motion.div>
               ))}
             </div>

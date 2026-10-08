@@ -206,3 +206,32 @@ export interface PatientProgress {
   needsReview: number;
   percentage: number;
 }
+
+export type CareCoordinationPriorityLevel = 'immediate-review' | 'high-priority' | 'routine';
+
+export interface CareCoordinationPriorityItem {
+  id: string;
+  patientId: string;
+  patientName: string;
+  level: CareCoordinationPriorityLevel;
+  reason: string;
+  followUp: string;
+  dueDate: string;
+  status: TaskStatus;
+  actionLabel: string;
+  sourceEvidence?: SourceEvidence;
+}
+
+export interface NeedsReviewItem {
+  id: string;
+  patientId: string;
+  patientName: string;
+  issue: string;
+  category: 'missing-date' | 'conflicting-instructions' | 'medication-question' | 'clinically-sensitive';
+  source: string;
+  page: number;
+  priority: 'immediate' | 'high' | 'routine';
+  extractedText: string;
+  flagReason: string;
+}
+

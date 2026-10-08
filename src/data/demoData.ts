@@ -1,6 +1,7 @@
 // ============================================================
 // CareFlow AI — Synthetic Demo Data
-// All data is fictional and for demonstration purposes only.
+// All data is fictional, synthetic, and for demonstration purposes only.
+// Does NOT represent actual medical diagnosis or medical advice.
 // ============================================================
 
 import type {
@@ -8,16 +9,14 @@ import type {
   Doctor,
   FollowUpTask,
   Appointment,
-  Referral,
-  Test,
   MedicationInstruction,
   CareInstruction,
   WarningSign,
-  Escalation,
-  ReminderAttempt,
   DischargeDocument,
   DashboardStats,
   PatientProgress,
+  CareCoordinationPriorityItem,
+  NeedsReviewItem,
 } from '../types';
 
 // ── Patients ──────────────────────────────────────────────────
@@ -51,42 +50,42 @@ export const demoPatients: Patient[] = [
   },
   {
     id: 'P003',
-    name: 'Mohammed Faiz',
-    age: 67,
+    name: 'Rahul Kumar',
+    age: 49,
     gender: 'Male',
     contactPhone: '+91 76543 21098',
-    contactEmail: 'mohammed.faiz@example.com',
-    preferredLanguage: 'Urdu',
+    contactEmail: 'rahul.k@example.com',
+    preferredLanguage: 'Tamil',
     admissionDate: '2026-10-02',
     dischargeDate: '2026-10-07',
-    primaryDiagnosis: 'COPD Exacerbation',
-    attendingPhysician: 'Dr. Meera Patel',
+    primaryDiagnosis: 'Post-Laparoscopic Cholecystectomy',
+    attendingPhysician: 'Dr. Ananya Desai',
   },
   {
     id: 'P004',
+    name: 'Ravi Kumar',
+    age: 63,
+    gender: 'Male',
+    contactPhone: '+91 65432 10987',
+    contactEmail: 'ravi.kumar@example.com',
+    preferredLanguage: 'English',
+    admissionDate: '2026-09-25',
+    dischargeDate: '2026-10-01',
+    primaryDiagnosis: 'Congestive Heart Failure Monitoring',
+    attendingPhysician: 'Dr. Meera Patel',
+  },
+  {
+    id: 'P005',
     name: 'Lakshmi Venkatesh',
     age: 73,
     gender: 'Female',
-    contactPhone: '+91 65432 10987',
+    contactPhone: '+91 54321 09876',
     contactEmail: 'lakshmi.v@example.com',
     preferredLanguage: 'Tamil',
     admissionDate: '2026-09-30',
     dischargeDate: '2026-10-04',
     primaryDiagnosis: 'Hip Fracture — Post-surgical Recovery',
     attendingPhysician: 'Dr. Ananya Desai',
-  },
-  {
-    id: 'P005',
-    name: 'Ravi Krishnan',
-    age: 35,
-    gender: 'Male',
-    contactPhone: '+91 54321 09876',
-    contactEmail: 'ravi.k@example.com',
-    preferredLanguage: 'English',
-    admissionDate: '2026-10-03',
-    dischargeDate: '2026-10-06',
-    primaryDiagnosis: 'Appendectomy — Post-operative',
-    attendingPhysician: 'Dr. Rajesh Iyer',
   },
 ];
 
@@ -97,9 +96,9 @@ export const demoDoctors: Doctor[] = [
     id: 'D001',
     name: 'Dr. Meera Patel',
     specialization: 'Cardiology',
-    department: 'Cardiac Care',
+    department: 'Cardiovascular Care',
     contactPhone: '+91 98700 00001',
-    contactEmail: 'meera.patel@hospital.example.com',
+    contactEmail: 'meera.patel@careflow.example.com',
   },
   {
     id: 'D002',
@@ -107,185 +106,479 @@ export const demoDoctors: Doctor[] = [
     specialization: 'Internal Medicine',
     department: 'General Medicine',
     contactPhone: '+91 98700 00002',
-    contactEmail: 'rajesh.iyer@hospital.example.com',
+    contactEmail: 'rajesh.iyer@careflow.example.com',
   },
   {
     id: 'D003',
     name: 'Dr. Ananya Desai',
-    specialization: 'Orthopedics',
-    department: 'Orthopedic Surgery',
+    specialization: 'Orthopedics & Surgery',
+    department: 'Surgical Recovery',
     contactPhone: '+91 98700 00003',
-    contactEmail: 'ananya.desai@hospital.example.com',
+    contactEmail: 'ananya.desai@careflow.example.com',
   },
 ];
 
-// ── Current Patient (for patient dashboard demo) ────────────
-
 export const currentPatient = demoPatients[0];
 
-// ── Follow-up Tasks ─────────────────────────────────────────
+// ── Patient Tasks (Aligned with Arun Kumar's discharge plan) ─
 
 export const demoFollowUpTasks: FollowUpTask[] = [
   {
     id: 'FT001',
     patientId: 'P001',
-    title: 'Cardiology follow-up appointment',
-    description: 'Follow-up with cardiology for post-MI monitoring and stress test evaluation.',
+    title: 'Cardiology follow-up',
+    description: 'Outpatient clinic visit for post-MI rhythm check, stress review, and echo consultation.',
     category: 'appointment',
     status: 'pending',
-    priority: 'high',
-    dueDate: '2026-10-15',
+    priority: 'urgent',
+    dueDate: '15 October 2026',
     createdAt: '2026-10-05',
     updatedAt: '2026-10-05',
+    assignedTo: 'Dr. Meera Patel',
     sourceEvidence: {
       documentId: 'DOC001',
-      documentName: 'Discharge Summary — Arun Kumar',
+      documentName: 'Discharge Summary • Arun Kumar',
       pageNumber: 2,
-      sectionTitle: 'Follow-up Instructions',
-      extractedText: 'Patient to follow up with cardiology within 10 days of discharge.',
-      confidence: 0.95,
+      sectionTitle: 'Post-Discharge Specialist Plan',
+      extractedText: 'Patient must be evaluated in Cardiology Outpatient Clinic within 10 days of hospital discharge.',
+      confidence: 0.98,
     },
   },
   {
     id: 'FT002',
     patientId: 'P001',
-    title: 'Complete blood test — Lipid panel',
-    description: 'Fasting lipid panel to monitor cholesterol levels post-discharge.',
+    title: 'Blood test (Fasting Lipid Panel & Renal Function)',
+    description: 'Venipuncture lab work to evaluate lipid controls and kidney function post-stent placement.',
     category: 'test',
-    status: 'completed',
-    priority: 'medium',
-    dueDate: '2026-10-08',
-    completedDate: '2026-10-08',
+    status: 'pending',
+    priority: 'high',
+    dueDate: '18 October 2026',
     createdAt: '2026-10-05',
-    updatedAt: '2026-10-08',
+    updatedAt: '2026-10-05',
     sourceEvidence: {
       documentId: 'DOC001',
-      documentName: 'Discharge Summary — Arun Kumar',
+      documentName: 'Discharge Summary • Arun Kumar',
       pageNumber: 3,
-      sectionTitle: 'Lab Orders',
-      extractedText: 'Fasting lipid panel within 3 days of discharge.',
-      confidence: 0.92,
+      sectionTitle: 'Required Laboratory Orders',
+      extractedText: 'Repeat serum creatinine, electrolytes, and lipid panel at 14 days post-discharge.',
+      confidence: 0.94,
     },
   },
   {
     id: 'FT003',
     patientId: 'P001',
-    title: 'Echocardiogram',
-    description: 'Echocardiogram to assess cardiac function.',
-    category: 'test',
+    title: 'Wound care check & surgical site inspection',
+    description: 'Catheter entry site inspection to ensure clean healing without hematoma.',
+    category: 'appointment',
     status: 'pending',
-    priority: 'high',
-    dueDate: '2026-10-20',
+    priority: 'medium',
+    dueDate: '20 October 2026',
     createdAt: '2026-10-05',
     updatedAt: '2026-10-05',
     sourceEvidence: {
       documentId: 'DOC001',
-      documentName: 'Discharge Summary — Arun Kumar',
-      pageNumber: 2,
-      sectionTitle: 'Diagnostic Follow-up',
-      extractedText: 'Echocardiogram within 2 weeks.',
-      confidence: 0.90,
+      documentName: 'Discharge Summary • Arun Kumar',
+      pageNumber: 4,
+      sectionTitle: 'Puncture Site Instructions',
+      extractedText: 'Femoral access site check with primary nurse practitioner at 2 weeks.',
+      confidence: 0.91,
     },
   },
   {
     id: 'FT004',
     patientId: 'P001',
-    title: 'Nephrology referral follow-up date',
-    description: 'Referral to nephrology was mentioned but no date specified.',
+    title: 'Follow-up date is not specified',
+    description: 'Nephrology consultation recommended for elevated creatinine, but discharge summary omitted target calendar date.',
     category: 'referral',
     status: 'needs-review',
-    priority: 'medium',
+    priority: 'high',
     createdAt: '2026-10-05',
     updatedAt: '2026-10-05',
+    notes: 'This item has been sent to your care coordinator for review.',
     sourceEvidence: {
       documentId: 'DOC001',
-      documentName: 'Discharge Summary — Arun Kumar',
+      documentName: 'Discharge Summary • Arun Kumar',
       pageNumber: 4,
-      sectionTitle: 'Referrals',
-      extractedText: 'Consider nephrology referral for elevated creatinine.',
-      confidence: 0.72,
+      sectionTitle: 'Specialist Referrals',
+      extractedText: 'Consider nephrology consultation for serum creatinine 1.4 at discharge. Timing not specified.',
+      confidence: 0.69,
     },
   },
   {
     id: 'FT005',
     patientId: 'P001',
-    title: 'Cardiac rehabilitation enrollment',
-    description: 'Enroll in phase II cardiac rehabilitation program.',
-    category: 'referral',
-    status: 'pending',
-    priority: 'medium',
-    dueDate: '2026-10-22',
+    title: 'Discharge medication instructions acknowledged',
+    description: 'Reviewed dual-antiplatelet schedule (Aspirin + Clopidogrel) and daily beta-blocker dosing.',
+    category: 'medication',
+    status: 'completed',
+    priority: 'high',
+    dueDate: '06 October 2026',
+    completedDate: '2026-10-06',
     createdAt: '2026-10-05',
-    updatedAt: '2026-10-05',
+    updatedAt: '2026-10-06',
     sourceEvidence: {
       documentId: 'DOC001',
-      documentName: 'Discharge Summary — Arun Kumar',
-      pageNumber: 3,
-      sectionTitle: 'Rehabilitation',
-      extractedText: 'Cardiac rehab phase II, begin within 2–3 weeks post-discharge.',
-      confidence: 0.88,
+      documentName: 'Discharge Summary • Arun Kumar',
+      pageNumber: 1,
+      sectionTitle: 'Medication Reconciliation',
+      extractedText: 'Patient and family instructed on uninterrupted antiplatelet therapy for 12 months.',
+      confidence: 0.99,
     },
   },
   {
     id: 'FT006',
-    patientId: 'P002',
-    title: 'Endocrinology follow-up',
-    description: 'Follow-up with endocrinology for diabetes management adjustment.',
-    category: 'appointment',
-    status: 'pending',
-    priority: 'high',
-    dueDate: '2026-10-13',
-    createdAt: '2026-10-06',
-    updatedAt: '2026-10-06',
-  },
-  {
-    id: 'FT007',
-    patientId: 'P002',
-    title: 'Follow-up date not specified',
-    description: 'Dietitian consultation was recommended but no timeline provided.',
-    category: 'referral',
-    status: 'needs-review',
+    patientId: 'P001',
+    title: 'Post-discharge baseline vitals recorded',
+    description: 'First blood pressure (122/78 mmHg) and pulse (68 bpm) baseline submitted via portal.',
+    category: 'monitoring',
+    status: 'completed',
     priority: 'medium',
-    createdAt: '2026-10-06',
-    updatedAt: '2026-10-06',
-  },
-  {
-    id: 'FT008',
-    patientId: 'P003',
-    title: 'Pulmonology follow-up',
-    description: 'Follow-up with pulmonology for COPD management.',
-    category: 'appointment',
-    status: 'overdue',
-    priority: 'high',
-    dueDate: '2026-10-07',
-    createdAt: '2026-10-07',
+    dueDate: '07 October 2026',
+    completedDate: '2026-10-07',
+    createdAt: '2026-10-05',
     updatedAt: '2026-10-07',
-  },
-  {
-    id: 'FT009',
-    patientId: 'P004',
-    title: 'Orthopedic follow-up — X-ray review',
-    description: 'Post-operative X-ray review with orthopedics.',
-    category: 'appointment',
-    status: 'pending',
-    priority: 'high',
-    dueDate: '2026-10-14',
-    createdAt: '2026-10-04',
-    updatedAt: '2026-10-04',
-  },
-  {
-    id: 'FT010',
-    patientId: 'P004',
-    title: 'Physical therapy sessions',
-    description: 'Begin outpatient physical therapy for hip mobility.',
-    category: 'referral',
-    status: 'in-progress',
-    priority: 'high',
-    dueDate: '2026-10-18',
-    createdAt: '2026-10-04',
-    updatedAt: '2026-10-06',
+    sourceEvidence: {
+      documentId: 'DOC001',
+      documentName: 'Discharge Summary • Arun Kumar',
+      pageNumber: 3,
+      sectionTitle: 'Home Monitoring Instructions',
+      extractedText: 'Record daily AM blood pressure; alert clinic if systolic drops below 100 or exceeds 160.',
+      confidence: 0.95,
+    },
   },
 ];
+
+// ── Patient Progress Indicator ────────────────────────────────
+
+export const demoPatientProgress: PatientProgress = {
+  total: 6,
+  completed: 2,
+  pending: 3,
+  overdue: 0,
+  needsReview: 1,
+  percentage: 33, // "2 of 6 tasks completed" (interactive in UI)
+};
+
+// ── Patient Recovery Timeline Milestones ─────────────────────
+
+export interface TimelineMilestone {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  status: 'completed' | 'current' | 'upcoming';
+  type: 'discharge' | 'task' | 'appointment' | 'reminder';
+}
+
+export const demoTimelineMilestones: TimelineMilestone[] = [
+  {
+    id: 'TM01',
+    date: '05 Oct 2026',
+    title: 'Discharged from Hospital',
+    description: 'City General Hospital discharge summary finalized and ingested into CareFlow AI.',
+    status: 'completed',
+    type: 'discharge',
+  },
+  {
+    id: 'TM02',
+    date: '06 Oct 2026',
+    title: 'Follow-up Plan Generated & Tasks Created',
+    description: '6 discrete tasks organized with automated care coordination tracking.',
+    status: 'completed',
+    type: 'task',
+  },
+  {
+    id: 'TM03',
+    date: '14 Oct 2026 • 10:00 AM',
+    title: 'Informational Follow-up Reminder Scheduled',
+    description: 'Automated 30-sec reminder call scheduled regarding tomorrow\'s cardiology visit.',
+    status: 'current',
+    type: 'reminder',
+  },
+  {
+    id: 'TM04',
+    date: '15 Oct 2026 • 10:30 AM',
+    title: 'Cardiology Appointment Upcoming',
+    description: 'Dr. Meera Patel • Cardiovascular Care Center, Suite 204.',
+    status: 'upcoming',
+    type: 'appointment',
+  },
+];
+
+// ── Care Coordination Priority (Doctor Feature) ──────────────
+// SAFETY RULE: Ranked purely on documented follow-up deadlines,
+// overdue tasks, and flagged instructions — NEVER medical diagnosis.
+
+export const demoCareCoordinationPriorities: CareCoordinationPriorityItem[] = [
+  {
+    id: 'CCP001',
+    patientId: 'P001',
+    patientName: 'Arun Kumar',
+    level: 'immediate-review',
+    reason: 'Documented urgent follow-up / unresolved clinical instruction (Missing Nephrology Date)',
+    followUp: 'Cardiology & Nephrology Clarification',
+    dueDate: '15 Oct 2026',
+    status: 'needs-review',
+    actionLabel: 'Review Now',
+    sourceEvidence: {
+      documentId: 'DOC001',
+      documentName: 'Discharge Summary • Arun Kumar',
+      pageNumber: 4,
+      sectionTitle: 'Specialist Referrals',
+      extractedText: 'Consider nephrology consultation for serum creatinine 1.4 at discharge. Timing not specified.',
+      confidence: 0.69,
+    },
+  },
+  {
+    id: 'CCP002',
+    patientId: 'P004',
+    patientName: 'Ravi Kumar',
+    level: 'immediate-review',
+    reason: 'Overdue follow-up task / Missed 07 Oct deadline without recorded visit',
+    followUp: 'Cardiology follow-up',
+    dueDate: '07 Oct 2026',
+    status: 'overdue',
+    actionLabel: 'Contact Patient',
+    sourceEvidence: {
+      documentId: 'DOC004',
+      documentName: 'Discharge Summary • Ravi Kumar',
+      pageNumber: 2,
+      sectionTitle: 'Follow-up Deadlines',
+      extractedText: 'Mandatory follow-up within 7 days post-discharge due to congestive history.',
+      confidence: 0.96,
+    },
+  },
+  {
+    id: 'CCP003',
+    patientId: 'P002',
+    patientName: 'Priya Sharma',
+    level: 'high-priority',
+    reason: 'Follow-up deadline approaching (Due 18 Oct) & unconfirmed lab booking',
+    followUp: 'Fasting Blood Glucose & HbA1c',
+    dueDate: '18 Oct 2026',
+    status: 'pending',
+    actionLabel: 'Review',
+    sourceEvidence: {
+      documentId: 'DOC002',
+      documentName: 'Discharge Summary • Priya Sharma',
+      pageNumber: 2,
+      sectionTitle: 'Endocrinology Plan',
+      extractedText: 'Repeat blood glucose fasting curve by October 18.',
+      confidence: 0.93,
+    },
+  },
+  {
+    id: 'CCP004',
+    patientId: 'P005',
+    patientName: 'Lakshmi Venkatesh',
+    level: 'high-priority',
+    reason: 'Conflicting physical therapy weight-bearing instructions flagged in summary notes',
+    followUp: 'Orthopedic Surgical Review',
+    dueDate: '14 Oct 2026',
+    status: 'needs-review',
+    actionLabel: 'Review',
+    sourceEvidence: {
+      documentId: 'DOC005',
+      documentName: 'Discharge Summary • Lakshmi Venkatesh',
+      pageNumber: 3,
+      sectionTitle: 'Rehab Mobility Protocol',
+      extractedText: 'Discharge order says non-weight bearing x 4 weeks; PT discharge note says partial weight bearing with walker.',
+      confidence: 0.74,
+    },
+  },
+  {
+    id: 'CCP005',
+    patientId: 'P003',
+    patientName: 'Rahul Kumar',
+    level: 'routine',
+    reason: 'Upcoming routine follow-up on track with confirmed appointment slot',
+    followUp: 'Surgical site wound inspection',
+    dueDate: '22 Oct 2026',
+    status: 'pending',
+    actionLabel: 'View',
+    sourceEvidence: {
+      documentId: 'DOC003',
+      documentName: 'Discharge Summary • Rahul Kumar',
+      pageNumber: 1,
+      sectionTitle: 'Surgical Instructions',
+      extractedText: 'Routine post-op follow-up in 2 weeks with Dr. Desai.',
+      confidence: 0.97,
+    },
+  },
+];
+
+// ── Needs Human Review Queue (Doctor Feature) ─────────────────
+
+
+export const demoNeedsReviewQueue: NeedsReviewItem[] = [
+  {
+    id: 'NR01',
+    patientId: 'P001',
+    patientName: 'Arun Kumar',
+    issue: 'Missing follow-up date for Nephrology referral',
+    category: 'missing-date',
+    source: 'Discharge Summary • Arun Kumar',
+    page: 4,
+    priority: 'immediate',
+    extractedText: 'Consider nephrology consultation for serum creatinine 1.4 at discharge.',
+    flagReason: 'No timeframe, target provider, or urgency window specified in discharge document.',
+  },
+  {
+    id: 'NR02',
+    patientId: 'P005',
+    patientName: 'Lakshmi Venkatesh',
+    issue: 'Conflicting discharge instructions regarding weight-bearing status',
+    category: 'conflicting-instructions',
+    source: 'Discharge Summary • Lakshmi Venkatesh',
+    page: 3,
+    priority: 'immediate',
+    extractedText: 'Discharge order: "Strict non-weight bearing 4w". Rehab note: "Partial weight-bearing as tolerated".',
+    flagReason: 'Conflicting clinical directives between attending surgeon order and rehab notes.',
+  },
+  {
+    id: 'NR03',
+    patientId: 'P001',
+    patientName: 'Arun Kumar',
+    issue: 'Patient asked a medication question regarding blood thinner interaction',
+    category: 'medication-question',
+    source: 'Patient Portal Message',
+    page: 1,
+    priority: 'high',
+    extractedText: '"Can I take ibuprofen for headaches while on Aspirin and Clopidogrel?"',
+    flagReason: 'System does NOT answer medication questions autonomously. Routed to care team.',
+  },
+  {
+    id: 'NR04',
+    patientId: 'P002',
+    patientName: 'Priya Sharma',
+    issue: 'Clinically sensitive item — Post-discharge hypoglycemic symptoms reported',
+    category: 'clinically-sensitive',
+    source: 'Vitals Log Note',
+    page: 2,
+    priority: 'high',
+    extractedText: 'Morning blood glucose logged as 62 mg/dL with mild tremor.',
+    flagReason: 'Symptom report requires human clinician assessment of insulin/metformin dosing.',
+  },
+];
+
+// ── Overdue Tasks Section ─────────────────────────────────────
+
+export interface OverdueItem {
+  id: string;
+  patientId: string;
+  patientName: string;
+  taskTitle: string;
+  dueDate: string;
+  attending: string;
+  contactPhone: string;
+  daysOverdue: number;
+}
+
+export const demoOverdueItems: OverdueItem[] = [
+  {
+    id: 'OD01',
+    patientId: 'P004',
+    patientName: 'Ravi Kumar',
+    taskTitle: 'Cardiology follow-up',
+    dueDate: '07 Oct 2026',
+    attending: 'Dr. Meera Patel',
+    contactPhone: '+91 65432 10987',
+    daysOverdue: 1,
+  },
+];
+
+// ── Upcoming Deadlines Section ────────────────────────────────
+
+export interface UpcomingDeadlineItem {
+  id: string;
+  patientId: string;
+  patientName: string;
+  taskTitle: string;
+  dueDate: string;
+  specialty: string;
+  status: 'pending' | 'confirmed';
+}
+
+export const demoUpcomingDeadlines: UpcomingDeadlineItem[] = [
+  {
+    id: 'UD01',
+    patientId: 'P005',
+    patientName: 'Lakshmi Venkatesh',
+    taskTitle: 'Orthopedic Surgical Review',
+    dueDate: '14 Oct 2026',
+    specialty: 'Orthopedics',
+    status: 'pending',
+  },
+  {
+    id: 'UD02',
+    patientId: 'P001',
+    patientName: 'Arun Kumar',
+    taskTitle: 'Cardiology follow-up',
+    dueDate: '15 Oct 2026',
+    specialty: 'Cardiology',
+    status: 'confirmed',
+  },
+  {
+    id: 'UD03',
+    patientId: 'P002',
+    patientName: 'Priya Sharma',
+    taskTitle: 'Fasting Blood Glucose & HbA1c',
+    dueDate: '18 Oct 2026',
+    specialty: 'Endocrinology / Labs',
+    status: 'pending',
+  },
+  {
+    id: 'UD04',
+    patientId: 'P003',
+    patientName: 'Rahul Kumar',
+    taskTitle: 'Wound care check',
+    dueDate: '22 Oct 2026',
+    specialty: 'General Surgery',
+    status: 'confirmed',
+  },
+];
+
+// ── AI Reminder Activity Simulation ──────────────────────────
+
+export interface ReminderActivitySimulation {
+  patientId: string;
+  patientName: string;
+  scheduledTime: string;
+  purpose: string;
+  channel: 'Voice Call' | 'SMS' | 'Portal';
+  currentStatus: 'Scheduled' | 'In Progress' | 'Delivered' | 'Unanswered Fallback';
+  attempts: {
+    attemptNumber: number;
+    description: string;
+    status: 'Completed' | 'No Answer' | 'Pending' | 'Scheduled';
+    timestamp?: string;
+  }[];
+  smsFallbackStatus: 'Pending' | 'Delivered' | 'Scheduled';
+}
+
+export const demoReminderSimulation: ReminderActivitySimulation = {
+  patientId: 'P001',
+  patientName: 'Arun Kumar',
+  scheduledTime: '14 Oct 2026 • 10:00 AM',
+  purpose: 'Informational follow-up reminder regarding Cardiology appointment on 15 Oct',
+  channel: 'Voice Call',
+  currentStatus: 'Scheduled',
+  attempts: [
+    {
+      attemptNumber: 1,
+      description: 'Attempt 1 — Automated phone call (Simulated)',
+      status: 'No Answer',
+      timestamp: '14 Oct • 10:00 AM',
+    },
+    {
+      attemptNumber: 2,
+      description: 'Attempt 2 — Automatic retry in 30 minutes',
+      status: 'Scheduled',
+      timestamp: '14 Oct • 10:30 AM',
+    },
+  ],
+  smsFallbackStatus: 'Pending',
+};
 
 // ── Appointments ─────────────────────────────────────────────
 
@@ -296,83 +589,18 @@ export const demoAppointments: Appointment[] = [
     doctorId: 'D001',
     doctorName: 'Dr. Meera Patel',
     specialization: 'Cardiology',
-    date: '2026-10-15',
+    date: '15 October 2026',
     time: '10:30 AM',
-    location: 'Cardiac Care Center, Room 204',
+    location: 'Cardiovascular Care Center, Suite 204',
     status: 'pending',
-  },
-  {
-    id: 'APT002',
-    patientId: 'P001',
-    doctorName: 'Dr. Sanjay Gupta',
-    specialization: 'Nephrology',
-    date: '',
-    status: 'needs-review',
-    notes: 'Referral mentioned but no appointment date specified.',
-  },
-];
-
-// ── Referrals ────────────────────────────────────────────────
-
-export const demoReferrals: Referral[] = [
-  {
-    id: 'REF001',
-    patientId: 'P001',
-    specialization: 'Nephrology',
-    reason: 'Elevated creatinine levels observed during admission.',
-    referredBy: 'Dr. Meera Patel',
-    status: 'needs-review',
-    priority: 'medium',
     sourceEvidence: {
       documentId: 'DOC001',
-      documentName: 'Discharge Summary — Arun Kumar',
-      pageNumber: 4,
-      sectionTitle: 'Referrals',
-      extractedText: 'Consider nephrology referral for elevated creatinine.',
-      confidence: 0.72,
+      documentName: 'Discharge Summary • Arun Kumar',
+      pageNumber: 2,
+      sectionTitle: 'Post-Discharge Specialist Plan',
+      extractedText: 'Cardiology outpatient visit scheduled for Oct 15 at 10:30 AM with Dr. Patel.',
+      confidence: 0.98,
     },
-  },
-  {
-    id: 'REF002',
-    patientId: 'P001',
-    specialization: 'Cardiac Rehabilitation',
-    reason: 'Post-MI cardiac rehabilitation program.',
-    referredBy: 'Dr. Meera Patel',
-    referredTo: 'City Cardiac Rehab Center',
-    status: 'pending',
-    priority: 'medium',
-    dueDate: '2026-10-22',
-  },
-];
-
-// ── Tests ────────────────────────────────────────────────────
-
-export const demoTests: Test[] = [
-  {
-    id: 'TST001',
-    patientId: 'P001',
-    testName: 'Fasting Lipid Panel',
-    category: 'Blood Test',
-    status: 'completed',
-    scheduledDate: '2026-10-08',
-    completedDate: '2026-10-08',
-    results: 'Total Cholesterol: 210 mg/dL, LDL: 130 mg/dL, HDL: 45 mg/dL',
-  },
-  {
-    id: 'TST002',
-    patientId: 'P001',
-    testName: 'Echocardiogram',
-    category: 'Cardiac Imaging',
-    status: 'pending',
-    scheduledDate: '2026-10-20',
-  },
-  {
-    id: 'TST003',
-    patientId: 'P001',
-    testName: 'HbA1c',
-    category: 'Blood Test',
-    status: 'pending',
-    scheduledDate: '2026-10-15',
   },
 ];
 
@@ -383,11 +611,19 @@ export const demoMedications: MedicationInstruction[] = [
     id: 'MED001',
     patientId: 'P001',
     medicationName: 'Aspirin',
-    dosage: '75 mg',
-    frequency: 'Once daily',
-    duration: 'Ongoing',
-    instructions: 'Take with food in the morning.',
-    warnings: ['Do not take with other blood thinners without consulting your doctor.'],
+    dosage: '81 mg',
+    frequency: 'Once daily with breakfast',
+    duration: '12 months',
+    instructions: 'Take with food to minimize stomach upset. Do not skip doses.',
+    warnings: ['Do not stop taking without consulting your cardiologist.'],
+    sourceEvidence: {
+      documentId: 'DOC001',
+      documentName: 'Discharge Summary • Arun Kumar',
+      pageNumber: 1,
+      sectionTitle: 'Discharge Prescriptions',
+      extractedText: 'Aspirin 81 mg daily PO with meals.',
+      confidence: 0.99,
+    },
   },
   {
     id: 'MED002',
@@ -396,17 +632,33 @@ export const demoMedications: MedicationInstruction[] = [
     dosage: '40 mg',
     frequency: 'Once daily at bedtime',
     duration: 'Ongoing',
-    instructions: 'Take at bedtime. Avoid grapefruit juice.',
+    instructions: 'Take at bedtime. Avoid grapefruit and grapefruit juice.',
+    sourceEvidence: {
+      documentId: 'DOC001',
+      documentName: 'Discharge Summary • Arun Kumar',
+      pageNumber: 1,
+      sectionTitle: 'Discharge Prescriptions',
+      extractedText: 'Atorvastatin 40 mg PO QHS.',
+      confidence: 0.99,
+    },
   },
   {
     id: 'MED003',
     patientId: 'P001',
-    medicationName: 'Metoprolol',
+    medicationName: 'Metoprolol Tartrate',
     dosage: '25 mg',
-    frequency: 'Twice daily',
-    duration: 'As directed by cardiologist',
-    instructions: 'Take with meals. Do not stop abruptly.',
-    warnings: ['May cause dizziness. Avoid sudden position changes.'],
+    frequency: 'Twice daily with meals',
+    duration: 'As instructed by cardiologist',
+    instructions: 'Take with or immediately after food. Check pulse prior to taking.',
+    warnings: ['May cause lightheadedness if standing up quickly.'],
+    sourceEvidence: {
+      documentId: 'DOC001',
+      documentName: 'Discharge Summary • Arun Kumar',
+      pageNumber: 1,
+      sectionTitle: 'Discharge Prescriptions',
+      extractedText: 'Metoprolol tartrate 25 mg PO BID.',
+      confidence: 0.98,
+    },
   },
 ];
 
@@ -416,25 +668,17 @@ export const demoCareInstructions: CareInstruction[] = [
   {
     id: 'CI001',
     patientId: 'P001',
-    category: 'Diet',
-    title: 'Heart-healthy diet',
-    description: 'Follow a low-sodium, low-fat diet. Increase fruits, vegetables, and whole grains. Limit processed foods and red meat.',
+    category: 'Activity Guidelines',
+    title: 'Gradual recovery and walking routine',
+    description: 'Walk on flat surfaces 10–15 minutes daily. Do not lift anything heavier than 10 lbs (4.5 kg) for 4 weeks.',
     importance: 'high',
   },
   {
     id: 'CI002',
     patientId: 'P001',
-    category: 'Activity',
-    title: 'Gradual activity increase',
-    description: 'Begin with light walking (10–15 minutes). Gradually increase activity as tolerated. Avoid heavy lifting (>10 lbs) for 4 weeks.',
-    importance: 'high',
-  },
-  {
-    id: 'CI003',
-    patientId: 'P001',
-    category: 'Monitoring',
-    title: 'Daily vitals monitoring',
-    description: 'Check blood pressure and heart rate daily. Record readings and bring to next appointment.',
+    category: 'Heart-Healthy Nutrition',
+    title: 'Low sodium and heart-smart diet',
+    description: 'Keep sodium below 2,000 mg/day. Prioritize vegetables, lean poultry, and whole grains. Avoid processed deli meats.',
     importance: 'medium',
   },
 ];
@@ -445,147 +689,42 @@ export const demoWarnings: WarningSign[] = [
   {
     id: 'WS001',
     patientId: 'P001',
-    symptom: 'Chest pain or pressure',
-    action: 'Call emergency services (112) immediately.',
+    symptom: 'Chest pressure, tightness, or pain spreading to arm or jaw',
+    action: 'Call Emergency Services (112 / 911) immediately. Do not drive yourself.',
     severity: 'emergency',
   },
   {
     id: 'WS002',
     patientId: 'P001',
-    symptom: 'Shortness of breath at rest',
-    action: 'Call emergency services (112) immediately.',
+    symptom: 'Sudden shortness of breath while resting or lying flat',
+    action: 'Call Emergency Services (112 / 911) immediately.',
     severity: 'emergency',
   },
   {
     id: 'WS003',
     patientId: 'P001',
-    symptom: 'Unusual swelling in legs or ankles',
-    action: 'Contact your doctor within 24 hours.',
-    severity: 'warning',
-  },
-  {
-    id: 'WS004',
-    patientId: 'P001',
-    symptom: 'Persistent dizziness or lightheadedness',
-    action: 'Contact your doctor within 24 hours.',
+    symptom: 'Swelling, redness, or warmth at femoral puncture site',
+    action: 'Contact cardiovascular clinic coordinator within 2 hours.',
     severity: 'warning',
   },
 ];
 
-// ── Escalations ──────────────────────────────────────────────
-
-export const demoEscalations: Escalation[] = [
-  {
-    id: 'ESC001',
-    patientId: 'P001',
-    patientName: 'Arun Kumar',
-    reason: 'Nephrology referral — no follow-up date specified in discharge summary.',
-    category: 'missing-info',
-    level: 'medium',
-    status: 'open',
-    createdAt: '2026-10-05',
-    sourceEvidence: {
-      documentId: 'DOC001',
-      documentName: 'Discharge Summary — Arun Kumar',
-      pageNumber: 4,
-      sectionTitle: 'Referrals',
-      extractedText: 'Consider nephrology referral for elevated creatinine.',
-      confidence: 0.72,
-    },
-  },
-  {
-    id: 'ESC002',
-    patientId: 'P002',
-    patientName: 'Priya Sharma',
-    reason: 'Dietitian consultation recommended but no timeline provided.',
-    category: 'missing-info',
-    level: 'low',
-    status: 'open',
-    createdAt: '2026-10-06',
-  },
-  {
-    id: 'ESC003',
-    patientId: 'P003',
-    patientName: 'Mohammed Faiz',
-    reason: 'Pulmonology follow-up is overdue. Patient has not responded to reminder calls.',
-    category: 'clinical',
-    level: 'high',
-    status: 'open',
-    createdAt: '2026-10-08',
-  },
-  {
-    id: 'ESC004',
-    patientId: 'P004',
-    patientName: 'Lakshmi Venkatesh',
-    reason: 'Conflicting instructions on weight-bearing activity between orthopedics and physical therapy notes.',
-    category: 'conflicting',
-    level: 'high',
-    status: 'in-review',
-    assignedTo: 'Dr. Ananya Desai',
-    createdAt: '2026-10-07',
-  },
-];
-
-// ── Reminders ────────────────────────────────────────────────
-
-export const demoReminders: ReminderAttempt[] = [
-  {
-    id: 'REM001',
-    patientId: 'P001',
-    taskId: 'FT001',
-    taskTitle: 'Cardiology follow-up appointment',
-    channel: 'phone',
-    status: 'delivered',
-    scheduledAt: '2026-10-08T09:00:00',
-    attemptedAt: '2026-10-08T09:00:00',
-    responseAt: '2026-10-08T09:02:00',
-    retryCount: 0,
-    maxRetries: 3,
-    notes: 'Patient acknowledged the reminder.',
-  },
-  {
-    id: 'REM002',
-    patientId: 'P001',
-    taskId: 'FT003',
-    taskTitle: 'Echocardiogram',
-    channel: 'sms',
-    status: 'sent',
-    scheduledAt: '2026-10-10T10:00:00',
-    attemptedAt: '2026-10-10T10:00:00',
-    retryCount: 0,
-    maxRetries: 3,
-  },
-  {
-    id: 'REM003',
-    patientId: 'P003',
-    taskId: 'FT008',
-    taskTitle: 'Pulmonology follow-up',
-    channel: 'phone',
-    status: 'unanswered',
-    scheduledAt: '2026-10-07T14:00:00',
-    attemptedAt: '2026-10-07T14:00:00',
-    retryCount: 2,
-    maxRetries: 3,
-    notes: 'No answer after 2 attempts. SMS fallback sent.',
-  },
-];
-
-// ── Discharge Documents ──────────────────────────────────────
+// ── Discharge Document ───────────────────────────────────────
 
 export const demoDocuments: DischargeDocument[] = [
   {
     id: 'DOC001',
     patientId: 'P001',
     type: 'discharge-summary',
-    fileName: 'Discharge_Summary_Arun_Kumar.pdf',
+    fileName: 'Discharge_Summary_Arun_Kumar_Oct2026.pdf',
     uploadedAt: '2026-10-05T14:30:00',
     processedAt: '2026-10-05T14:32:00',
     status: 'processed',
-    pageCount: 6,
+    pageCount: 5,
   },
 ];
 
-// ── Dashboard Stats (Doctor) ─────────────────────────────────
+// ── Dashboard Statistics (Doctor) ────────────────────────────
 
 export const demoDashboardStats: DashboardStats = {
   totalPatients: 5,
@@ -595,15 +734,4 @@ export const demoDashboardStats: DashboardStats = {
   needsReview: 3,
   escalations: 4,
   completedToday: 2,
-};
-
-// ── Patient Progress ─────────────────────────────────────────
-
-export const demoPatientProgress: PatientProgress = {
-  total: 5,
-  completed: 1,
-  pending: 2,
-  overdue: 0,
-  needsReview: 1,
-  percentage: 20,
 };

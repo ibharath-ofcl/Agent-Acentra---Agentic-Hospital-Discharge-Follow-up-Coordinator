@@ -1,6 +1,6 @@
 # CareFlow AI — Agentic Hospital Discharge & Follow-up Coordinator
 
-> **Phase 1: Frontend Foundation & Architecture**  
+> **Phase 1: Frontend Foundation & Demo-Ready Refinement**  
 > *Acentra Agentic Healthcare Hackathon Initiative*
 
 ---
@@ -38,7 +38,17 @@ Task Completion & Recovery Verification
 
 ---
 
-## 2. Strict Clinical Safety Boundaries
+## 2. Visual Identity & Design System
+
+The application has been polished to reflect an enterprise healthcare aesthetic inspired by the **Acentra Health** visual identity:
+- **Primary Brand Shell**: Deep Dark Teal (`#03181b`, `#052429`, `#0a383f`)
+- **Primary Accent**: Electric Bright Green (`#00e575`, `#00cb68`)
+- **Typography**: Clean, accessible soft-white and dark-slate typography using modern font tokens
+- **Healthcare Signals**: Subtle borders, calibrated alert badges (🔴 Immediate Review, 🟠 High Priority, 🟢 Routine), minimal gradients, zero childish illustrations or generic dashboard styling.
+
+---
+
+## 3. Strict Clinical Safety Boundaries
 
 **CareFlow AI is NOT a medical diagnosis system.**
 
@@ -49,45 +59,18 @@ To protect patient safety and adhere to clinical standards:
 - It **never** makes autonomous clinical decisions.
 - It **never** presents provider matches as guaranteed.
 - Whenever information in a discharge summary is missing, conflicting, or clinically ambiguous, it flags the item as **"Needs Review"** and routes it directly to a human care coordinator or attending doctor.
+- **Care Coordination Priority** ranks patients based **only** on explicit documented deadlines, overdue tasks, and unresolved instructions—**never** on medical diagnosis or medical severity prediction.
 
 ---
 
-## 3. Technology Stack
+## 4. Technology Stack
 
 - **Framework**: React 19 + TypeScript
 - **Bundler & Tooling**: Vite 8
-- **Styling**: Tailwind CSS v4 (Modern HSL-tuned healthcare design tokens)
+- **Styling**: Tailwind CSS v4 (Custom enterprise healthcare tokens)
 - **Routing**: React Router DOM v7
 - **Motion & Interactions**: Framer Motion
 - **Icons**: Lucide React
-
----
-
-## 4. Frontend Architecture
-
-The codebase follows a modular, scalable architecture designed for seamless backend integration in subsequent phases:
-
-```
-src/
-├── components/
-│   ├── common/              # Reusable UI primitives (StatusBadge, SourceEvidenceTag)
-│   ├── landing/             # Landing page sections (Hero, HowItWorks, Capabilities,
-│   │                        # ClosedLoop, Reminders, Safety, Experiences, Footer)
-├── data/
-│   └── demoData.ts          # Dedicated synthetic data layer (Patients, Tasks, Labs, Docs)
-├── hooks/
-│   └── useAuth.ts           # Demo authentication hook (session storage based)
-├── pages/
-│   ├── LandingPage.tsx      # Comprehensive product showcase & clinical safety
-│   ├── LoginPage.tsx        # Role-based demo login (Patient vs. Doctor)
-│   ├── PatientDashboard.tsx # "What do I need to do next?" patient experience
-│   └── DoctorDashboard.tsx  # Clinical command center & "Needs Review" triage
-├── types/
-│   └── index.ts             # Strongly-typed TypeScript interfaces (15+ core domain models)
-├── App.tsx                  # Main route declaration
-├── index.css                # Healthcare design system tokens & animation keyframes
-└── main.tsx                 # Root React entry point
-```
 
 ---
 
@@ -95,10 +78,10 @@ src/
 
 | Route | Purpose | Access |
 |---|---|---|
-| `/` | Comprehensive Product Landing Page | Public |
+| `/` | Comprehensive Product Landing Page & Workflow Architecture | Public |
 | `/login` | Role-selected demonstration sign-in | Public |
-| `/patient` | Patient Recovery & Task Dashboard | Demo Authenticated / Direct |
-| `/doctor` | Care Coordinator & Doctor Command Center | Demo Authenticated / Direct |
+| `/patient` | Patient Recovery & Task Dashboard ("What do I need to do next?") | Patient Portal |
+| `/doctor` | Care Coordinator & Doctor Command Center | Doctor Portal |
 
 ### Demo Credentials
 
@@ -107,51 +90,54 @@ src/
 | **Patient** | `patient` | `patient123` | `/patient` |
 | **Doctor / Coordinator** | `doctor` | `doctor123` | `/doctor` |
 
-*(Quick-fill demo buttons are provided on the `/login` screen for fast testing.)*
+*(Quick-fill demo buttons are provided on the `/login` screen for instant testing.)*
 
 ---
 
-## 6. Key Features (Phase 1 Implemented)
+## 6. Key Features Implemented in Phase 1
 
-### Landing Page
-- **Hero Section**: Communicates value proposition with visual 6-stage workflow pipeline.
-- **How CareFlow AI Works**: 6-step interactive workflow detailing extraction through escalation.
-- **Official Capabilities**: 7 core capabilities (Agentic AI, Document Intelligence, Task Orchestration, Healthcare Workflow, Multilingual AI, Provider Matching, Clinical Safety).
-- **Closed-Loop Coordination**: Demonstrates the continuous `Understand → Plan → Assign → Remind → Track → Escalate → Complete` lifecycle.
-- **AI Reminder Feature**: Explains informational-only follow-up calls with explicit safety limits and fallback flow.
-- **Clinical Safety & Human-in-the-Loop**: High-trust section detailing escalation triggers (missing info, ambiguities, conflicting instructions).
-- **Patient & Doctor Experience Showcases**: Detailed previews of both portal perspectives.
+### Landing Page (`/`)
+- **Visual Workflow**: Full 7-stage pipeline diagram: Discharge Summary → AI Understanding → Validation → Follow-up Plan → Tasks & Timeline → Reminders → Human Review.
+- **Direct Demo CTA**: "Try the Demo" button directing users immediately to `/login`.
+- **How It Works**: 6-step deep dive into document intake, uncertainty detection, and coordinator escalation.
+- **Official Capabilities**: 7 enterprise pillars including Agentic AI, Document Intelligence, Task Orchestration, and Clinical Safety.
+- **Closed-Loop Coordination**: Demonstrates continuous cycle: `Understand → Plan → Assign → Remind → Track → Escalate → Complete`.
+- **AI Reminder Feature**: Explains informational phone reminders with safety limits and fallback flow.
 
 ### Patient Dashboard (`/patient`)
-- **"What do I need to do next?" Hero**: Highlights the single next high-priority action with target date and clinician.
-- **Discharge Plan Progress**: Real-time progress bar tracking completed, pending, and reviewed tasks.
-- **Follow-up Tasks & Timeline**: Filterable by Appointments, Diagnostics & Labs, Medications, and Red Flag Signs.
-- **Needs Review Alerts**: Explains why an item was flagged and shows coordinator follow-up status.
-- **Source Evidence Provenance**: Document name, page number, and confidence score for every extracted instruction.
-- **Language Selector**: UI support for English, Hindi, Spanish, and Tamil.
-- **Emergency Red Flag Warnings**: Clear 911/112 protocols for severe symptoms.
+- **Core Question**: *"What do I need to do next?"*
+- **Welcome Header**: "Good morning, Arun — Here is your follow-up plan after discharge."
+- **NEXT ACTION Card**: Prominently displays *Cardiology follow-up | 15 October 2026 | Pending* with "View Details" inspection modal.
+- **Follow-up Progress**: Interactive indicator showing tasks completed (e.g. *2 of 6 tasks completed*) with real-time updates as tasks are toggled.
+- **Upcoming Tasks**: Cardiology appointment (15 Oct), Blood test (18 Oct), Wound care check (20 Oct).
+- **Completed Tasks**: Discharge medication instructions acknowledged (Completed).
+- **Needs Review Section**: Highlights *"Follow-up date is not specified"* with clear note: *"This item has been sent to your care coordinator for review."*
+- **Timeline**: Visual milestone track from Discharge → Follow-up created → Reminder scheduled → Appointment upcoming.
+- **AI Reminder Simulation**: Details 14 Oct 10:00 AM call with simulated retry & SMS fallback logs.
+- **Language Selector**: UI selector for English, Tamil, and Hindi.
+- **Red Flag Warnings**: Emergency instructions for immediate 112/911 situations.
 
 ### Doctor & Care Coordinator Dashboard (`/doctor`)
-- **Triage Command Center**: Metric cards for Total Patients, Pending Follow-ups, Upcoming Deadlines, Overdue Items, Needs Review, and Open Escalations.
-- **Needs Review Queue**: Immediate triage tray with interactive **Approve** and **Inspect Source** actions.
-- **Overdue Items Tray**: Prioritizes missed deadlines and unacknowledged reminders.
-- **Patient Cohort Queue**: Tabular view of discharged patients with search by name or diagnosis, and full modal detail views.
-- **Automated Reminder Logs**: Channel tracking (Voice Call, SMS) with retry counters.
-- **Escalation Tickets**: Level-based categorization (Missing Info, Conflicting, Clinical).
+- **Core Question**: *"Which patients need my attention?"*
+- **Top 5 Statistics**:
+  1. Total Patients: 5
+  2. Pending Follow-ups: 7
+  3. High Priority: 2
+  4. Needs Review: 4
+  5. Overdue: 1
+- **Care Coordination Priority (Prominent Feature)**:
+  - 🔴 **Immediate Review**: Arun Kumar ("Documented urgent follow-up / unresolved clinical instruction")
+  - 🟠 **High Follow-up Priority**: Priya Sharma ("Follow-up deadline approaching")
+  - 🟢 **Routine**: Rahul Kumar ("Upcoming routine follow-up")
+  - *Strictly decoupled from medical diagnosis.*
+- **Patient Queue Table**: Full cohort listing with columns: Patient, Follow-up, Due Date, Priority, Status, Action. Searchable and filterable by priority and status.
+- **Needs Human Review Queue**: Triage tray for missing dates, conflicting instructions, patient medication questions, and clinically sensitive items with interactive **Review** and **Approve** actions.
+- **Upcoming & Overdue Sections**: Highlights overdue items (e.g., Ravi Kumar | Cardiology follow-up | Overdue) and upcoming deadlines.
+- **Source Evidence Citations**: Transparent provenance tags (*Source: Discharge Summary • Page 2*) with expandable sentence views and OCR confidence metrics.
 
 ---
 
-## 7. Roadmap: Future Phases
-
-- **Phase 2**: Document Intelligence & OCR Pipeline (PDF parsing, FHIR/HL7 integration, structured JSON extraction).
-- **Phase 3**: LLM Multi-Agent Orchestrator (LangChain / Gemini SDK agents with validation tools and confidence scoring).
-- **Phase 4**: Provider Matching Engine (Specialist registry, location/NPI lookup, in-network insurance matching).
-- **Phase 5**: Twilio Voice & Multi-Channel Reminder Service (Automated informational call trees, SMS fallback, retry scheduling).
-- **Phase 6**: HIPAA-Compliant Authentication & Database Persistence (PostgreSQL, Supabase / Firebase, audit logging).
-
----
-
-## 8. Running Locally
+## 7. Running Locally
 
 ### Prerequisites
 - Node.js (v18 or higher recommended)
@@ -185,6 +171,6 @@ src/
 
 ---
 
-## 9. License & Safety Disclaimer
+## 8. License & Safety Disclaimer
 
 This project was developed for demonstration and hackathon evaluation purposes. All clinical data presented in Phase 1 is purely **synthetic** and does not represent real protected health information (PHI). Never use this system for real-world medical decision-making without certified clinical integrations and regulatory compliance approval.

@@ -12,38 +12,38 @@ const steps = [
   {
     icon: Upload,
     title: 'Upload Discharge Summary',
-    description: 'Hospital discharge documents are uploaded to CareFlow AI for processing.',
-    color: 'bg-primary-100 text-primary-600 border-primary-200',
+    description: 'Hospital discharge records and clinical summaries are uploaded to CareFlow AI for intake.',
+    color: 'bg-teal-50 text-teal-800 border-teal-200',
   },
   {
     icon: ScanSearch,
     title: 'Extract Follow-up Information',
-    description: 'AI extracts appointments, tests, referrals, medications, and care instructions from the document.',
-    color: 'bg-teal-100 text-teal-600 border-teal-200',
+    description: 'Autonomous extraction parses specialist visits, lab tests, referrals, and medication reconciliations.',
+    color: 'bg-emerald-50 text-emerald-800 border-emerald-200',
   },
   {
     icon: AlertTriangle,
     title: 'Validate & Detect Uncertainty',
-    description: 'The system flags missing dates, ambiguous instructions, or conflicting information for human review.',
-    color: 'bg-amber-100 text-amber-600 border-amber-200',
+    description: 'The system flags missing dates, ambiguous clinical statements, or conflicting directives.',
+    color: 'bg-amber-50 text-amber-800 border-amber-200',
   },
   {
     icon: ListChecks,
     title: 'Build Follow-up Tasks',
-    description: 'Structured tasks with timelines are created for each follow-up action — appointments, tests, and referrals.',
-    color: 'bg-emerald-100 text-emerald-600 border-emerald-200',
+    description: 'Structured tasks with calendar milestones are generated for patient and care team visibility.',
+    color: 'bg-teal-50 text-teal-800 border-teal-200',
   },
   {
     icon: BellRing,
     title: 'Remind & Track',
-    description: 'Automated reminders help patients stay on track. All attempts are recorded and tracked.',
-    color: 'bg-primary-100 text-primary-600 border-primary-200',
+    description: 'Automated informational reminders reach out to patients, tracking task progress.',
+    color: 'bg-emerald-50 text-emerald-800 border-emerald-200',
   },
   {
     icon: UserCheck,
     title: 'Escalate to Human Reviewer',
-    description: 'When information is unclear or clinically sensitive, it is routed to a human care coordinator or doctor.',
-    color: 'bg-coral-100 text-coral-600 border-coral-200',
+    description: 'Unresolved or clinically sensitive items escalate to attending physicians or care coordinators.',
+    color: 'bg-red-50 text-red-800 border-red-200',
   },
 ];
 
@@ -61,7 +61,7 @@ const cardVariants = {
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-20 sm:py-28 bg-surface-secondary">
+    <section id="how-it-works" className="py-20 sm:py-28 bg-slate-50 border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -71,14 +71,14 @@ export function HowItWorksSection() {
           transition={{ duration: 0.5 }}
           className="text-center max-w-2xl mx-auto mb-16"
         >
-          <p className="text-sm font-semibold text-primary-600 uppercase tracking-wider mb-3">
-            How it works
+          <p className="text-xs font-bold text-teal-800 uppercase tracking-widest mb-3">
+            Workflow Architecture
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-text-primary tracking-tight">
-            From Document to Follow-up in Six Steps
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            How CareFlow AI Works
           </h2>
-          <p className="mt-4 text-text-secondary text-lg">
-            CareFlow AI transforms unstructured discharge instructions into an organized, trackable follow-up workflow.
+          <p className="mt-4 text-slate-600 text-base sm:text-lg">
+            From unstructured discharge PDFs to verified clinical follow-up in six structured stages.
           </p>
         </motion.div>
 
@@ -94,28 +94,23 @@ export function HowItWorksSection() {
             <motion.div
               key={step.title}
               variants={cardVariants}
-              className="relative bg-white rounded-xl border border-border p-6 hover:shadow-md transition-shadow group"
+              className="relative bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md transition-shadow group"
             >
               {/* Step number */}
-              <span className="absolute top-4 right-4 text-xs font-bold text-sage-300">
-                {String(i + 1).padStart(2, '0')}
+              <span className="absolute top-4 right-4 text-xs font-mono font-bold text-slate-400 group-hover:text-teal-800 transition-colors">
+                STAGE 0{i + 1}
               </span>
 
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${step.color} mb-4`}>
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${step.color} mb-4 shadow-xs`}>
                 <step.icon className="w-5 h-5" />
               </div>
 
-              <h3 className="text-base font-semibold text-text-primary mb-2">
+              <h3 className="text-base font-bold text-slate-900 mb-2">
                 {step.title}
               </h3>
-              <p className="text-sm text-text-secondary leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 {step.description}
               </p>
-
-              {/* Connector line for visual flow */}
-              {i < steps.length - 1 && i % 3 !== 2 && (
-                <div className="hidden lg:block absolute top-1/2 -right-3 w-6 border-t border-dashed border-sage-300" />
-              )}
             </motion.div>
           ))}
         </motion.div>
