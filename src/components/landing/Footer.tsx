@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Activity, ShieldCheck, HeartPulse, Stethoscope, ArrowRight } from 'lucide-react';
 
+const CURRENT_YEAR = 2026;
+
 export function Footer() {
   return (
     <footer className="bg-[#03181b] text-slate-300 border-t border-[#0a383f] py-12 lg:py-16">
@@ -32,10 +34,12 @@ export function Footer() {
               Platform Workflow
             </h4>
             <ul className="space-y-2 text-xs text-slate-300">
-              <li><a href="#product" className="hover:text-white transition-colors">Core Capabilities</a></li>
-              <li><a href="#how-it-works" className="hover:text-white transition-colors">6-Step Processing</a></li>
-              <li><a href="#safety" className="hover:text-white transition-colors">Clinical Safety Trigger</a></li>
-              <li><Link to="/login" className="hover:text-white transition-colors flex items-center gap-1">Portal Login <ArrowRight className="w-3 h-3 text-[#00e575]" /></Link></li>
+              <li><a href="#product" className="hover:text-white transition-colors">Product Capabilities</a></li>
+              <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+              <li><a href="#safety" className="hover:text-white transition-colors">Clinical Safety</a></li>
+              <li><a href="#for-patients" className="hover:text-white transition-colors">For Patients</a></li>
+              <li><a href="#for-care-teams" className="hover:text-white transition-colors">For Care Teams</a></li>
+              <li><Link to="/login" className="hover:text-white transition-colors flex items-center gap-1 font-semibold text-[#00e575]">Try the Demo <ArrowRight className="w-3 h-3 text-[#00e575]" /></Link></li>
             </ul>
           </div>
 
@@ -52,7 +56,7 @@ export function Footer() {
               </li>
               <li>
                 <Link to="/doctor" className="hover:text-white flex items-center gap-1.5 transition-colors">
-                  <Stethoscope className="w-3.5 h-3.5 text-[#00e575]" /> Doctor & Coordinator Queue
+                  <Stethoscope className="w-3.5 h-3.5 text-[#00e575]" /> Doctor Command Center (Dr. Meera Patel)
                 </Link>
               </li>
               <li>
@@ -70,7 +74,7 @@ export function Footer() {
             <strong className="text-white">Clinical Safety Boundary:</strong> CareFlow AI is an administrative and follow-up coordination prototype. It does not diagnose medical conditions, recommend clinical treatment, adjust medications, or make diagnostic decisions. All extracted instructions are sourced directly from the hospital's discharge summary with source citations, and any uncertainty is flagged for human review.
           </p>
           <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-2 text-[11px] text-slate-400">
-            <p>© {new Date().getFullYear()} CareFlow AI. Phase 1 Interactive Prototype • Synthetic healthcare demo data only.</p>
+            <p>© {CURRENT_YEAR} CareFlow AI. Phase 1 Interactive Prototype • Synthetic healthcare demo data only.</p>
             <p className="font-mono text-slate-400">Acentra Agentic Healthcare Hackathon</p>
           </div>
         </div>

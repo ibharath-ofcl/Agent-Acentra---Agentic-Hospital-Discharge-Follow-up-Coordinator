@@ -7,6 +7,7 @@ import { ReminderSection } from '../components/landing/ReminderSection';
 import { SafetySection } from '../components/landing/SafetySection';
 import { PatientExperienceSection } from '../components/landing/PatientExperienceSection';
 import { DoctorExperienceSection } from '../components/landing/DoctorExperienceSection';
+import { FinalCtaSection } from '../components/landing/FinalCtaSection';
 import { Footer } from '../components/landing/Footer';
 
 export function LandingPage() {
@@ -22,6 +23,7 @@ export function LandingPage() {
         <SafetySection />
         <PatientExperienceSection />
         <DoctorExperienceSection />
+        <FinalCtaSection />
       </main>
       <Footer />
     </div>
