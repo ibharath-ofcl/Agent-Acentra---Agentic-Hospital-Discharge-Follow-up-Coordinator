@@ -1,34 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Activity,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  Pill,
-  HeartPulse,
-  Globe,
-  LogOut,
-  ShieldCheck,
-  Stethoscope,
-  PhoneCall,
-  Check,
-  X,
-  ChevronRight,
-  Info,
-} from 'lucide-react';
-import {
-  currentPatient,
-  demoFollowUpTasks,
-  demoMedications,
-  demoCareInstructions,
-  demoWarnings,
-  demoTimelineMilestones,
-  demoReminderSimulation,
-} from '../data/demoData';
+import { Activity, Calendar, Clock, CheckCircle2, AlertTriangle, FileText, Pill, HeartPulse, Globe, LogOut, ShieldCheck, Stethoscope, PhoneCall, Check, X, ChevronRight, Info, Menu, UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History, BellRing, HelpCircle } from 'lucide-react';
+
 import { StatusBadge } from '../components/common/StatusBadge';
 import { SourceEvidenceTag } from '../components/common/SourceEvidenceTag';
 import { useAuth } from '../hooks/useAuth';
@@ -40,10 +15,48 @@ export function PatientDashboard() {
 
   // Local state for interactive patient experience
   const [selectedLanguage, setSelectedLanguage] = useState<'English' | 'Tamil' | 'Hindi'>('English');
-  const [activeNav, setActiveNav] = useState<'dashboard' | 'plan' | 'timeline' | 'reminders' | 'profile'>('dashboard');
-  const [taskList, setTaskList] = useState<FollowUpTask[]>(demoFollowUpTasks);
+  const [activeNav, setActiveNav] = useState('dashboard');
+
+  const sidebarNav = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'plan', label: 'My Follow-ups', icon: ListTodo },
+    { id: 'upcoming', label: 'Upcoming Tasks', icon: CalendarClock },
+    { id: 'tests', label: 'Tests & Referrals', icon: Stethoscope },
+    { id: 'instructions', label: 'Care Instructions', icon: ClipboardList },
+    { id: 'timeline', label: 'Timeline', icon: History },
+    { id: 'reminders', label: 'Reminders', icon: BellRing },
+    { id: 'help', label: 'Help / Human Review', icon: HelpCircle },
+  ];
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [profile, setProfile] = useState<any>(null);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [me, tsk, tl] = await Promise.all([
+          api.getPatientMe(),
+          api.getPatientTasks(),
+          api.getPatientTimeline()
+        ]);
+        setProfile(me);
+        setTaskList(tsk);
+        setTimeline(tl);
+      } catch(e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const [taskList, setTaskList] = useState<any[]>([]);
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all');
-  const [timeline, setTimeline] = useState(demoTimelineMilestones);
+  
   const [selectedTaskModal, setSelectedTaskModal] = useState<FollowUpTask | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -93,7 +106,7 @@ export function PatientDashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-20">
+        <div className="flex bg-[#f8fafc] text-slate-900 min-h-screen">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -101,7 +114,7 @@ export function PatientDashboard() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-20 right-4 z-50 bg-[#052429] border border-[#00e575] text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2"
+            className="fixed top-4 right-4 z-[60] bg-[#052429] border border-[#00e575] text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2"
           >
             <CheckCircle2 className="w-4 h-4 text-[#00e575]" />
             <span>{toastMessage}</span>
@@ -109,129 +122,156 @@ export function PatientDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Deep Dark Teal Navigation Header */}
-      <header className="sticky top-0 z-40 bg-[#052429] text-white border-b border-[#0e4851] shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-16 flex items-center justify-between">
-            {/* Brand */}
-            <div className="flex items-center gap-3">
-              <Link to="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
-                  <Activity className="w-4.5 h-4.5 stroke-[2.5]" />
-                </div>
-                <span className="font-bold text-base tracking-tight hidden sm:inline text-white">
-                  CareFlow <span className="text-[#00e575]">AI</span>
-                </span>
-              </Link>
-              <span className="text-[11px] bg-[#0a383f] text-[#00e575] font-bold px-2.5 py-0.5 rounded-full border border-[#0e4851]">
-                Patient Portal
-              </span>
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex flex-col w-64 bg-[#052429] border-r border-[#0e4851] flex-shrink-0 fixed inset-y-0 z-40">
+        <div className="h-16 flex items-center gap-3 px-5 border-b border-[#0e4851]">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
+              <Activity className="w-4.5 h-4.5 stroke-[2.5]" />
             </div>
-
-            {/* Top Navigation Items */}
-            <nav className="hidden md:flex items-center gap-1 text-xs">
-              {[
-                { id: 'dashboard', label: 'Dashboard' },
-                { id: 'plan', label: 'My Follow-up Plan' },
-                { id: 'timeline', label: 'Timeline' },
-                { id: 'reminders', label: 'Reminders' },
-                { id: 'profile', label: 'Profile' },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveNav(item.id as any)}
-                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                    activeNav === item.id
-                      ? 'bg-[#00e575] text-[#052429]'
-                      : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-
-            {/* Right Header Tools: Language & Profile */}
-            <div className="flex items-center gap-3">
-              {/* Language Selector */}
-              <div className="flex items-center gap-1.5 bg-[#072d33] border border-[#0e4851] px-2.5 py-1.5 rounded-xl text-xs">
-                <Globe className="w-3.5 h-3.5 text-[#00e575]" />
-                <select
-                  value={selectedLanguage}
-                  aria-label="Select language"
-                  onChange={(e) => {
-                    setSelectedLanguage(e.target.value as any);
-                    setToastMessage(`Language updated to ${e.target.value}`);
-                    setTimeout(() => setToastMessage(null), 2500);
-                  }}
-                  className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer font-medium"
-                >
-                  <option value="English" className="bg-[#052429] text-white">English</option>
-                  <option value="Tamil" className="bg-[#052429] text-white">தமிழ் (Tamil)</option>
-                  <option value="Hindi" className="bg-[#052429] text-white">हिन्दी (Hindi)</option>
-                </select>
-              </div>
-
-              {/* Patient Avatar */}
-              <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-[#0e4851] text-xs">
-                <div className="w-8 h-8 rounded-full bg-[#00e575] text-[#052429] font-black flex items-center justify-center text-xs">
-                  AK
-                </div>
-                <div className="text-left text-white leading-tight">
-                  <div className="font-bold text-xs">{currentPatient.name}</div>
-                  <div className="text-[10px] text-slate-400">MRN: {currentPatient.id}</div>
-                </div>
-              </div>
-
-              {/* Doctor view switch */}
-              <Link
-                to="/doctor"
-                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-[#00e575] bg-[#072d33] hover:bg-[#0a383f] border border-[#0e4851] rounded-lg transition-colors"
-                title="Switch to Doctor Dashboard"
-              >
-                <Stethoscope className="w-3.5 h-3.5" /> Doctor View
-              </Link>
-
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-[#072d33] transition-colors"
-                title="Sign Out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+            <span className="font-bold text-base tracking-tight text-white line-clamp-1">
+              CareFlow <span className="text-[#00e575]">AI</span>
+            </span>
+          </Link>
         </div>
-      </header>
+        
+        <div className="px-5 py-3 border-b border-[#0e4851]">
+          <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Role</div>
+          <div className="text-xs font-bold text-[#00e575]">Patient Portal</div>
+        </div>
 
-      {/* Mobile Navigation (Scrollable) */}
-      <div className="md:hidden bg-[#052429] border-b border-[#0e4851] overflow-x-auto hide-scrollbar sticky top-16 z-30">
-        <div className="flex items-center px-4 py-2 gap-2 w-max">
-          {[
-            { id: 'dashboard', label: 'Dashboard' },
-            { id: 'plan', label: 'My Follow-up Plan' },
-            { id: 'timeline', label: 'Timeline' },
-            { id: 'reminders', label: 'Reminders' },
-            { id: 'profile', label: 'Profile' },
-          ].map((item) => (
+        <nav className="flex-1 overflow-y-auto hide-scrollbar py-4 px-3 space-y-1">
+          {sidebarNav.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveNav(item.id as any)}
-              className={`px-3 py-1.5 text-xs rounded-full font-semibold transition-colors ${
+              onClick={() => setActiveNav(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
                 activeNav === item.id
                   ? 'bg-[#00e575] text-[#052429]'
-                  : 'text-slate-300 bg-[#0a383f] border border-[#0e4851]'
+                  : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
               }`}
             >
+              <item.icon className="w-4 h-4 shrink-0" />
               {item.label}
             </button>
           ))}
-        </div>
-      </div>
+        </nav>
 
-      {/* Main Body Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <div className="p-4 border-t border-[#0e4851] space-y-2">
+          {/* Language Selector */}
+          <div className="flex items-center gap-2 mb-3 bg-[#072d33] border border-[#0e4851] px-2.5 py-1.5 rounded-xl text-xs w-full">
+            <Globe className="w-4 h-4 text-[#00e575] shrink-0" />
+            <select
+              value={selectedLanguage}
+              aria-label="Select language"
+              onChange={(e) => {
+                setSelectedLanguage(e.target.value as any);
+                setToastMessage(`Language updated to ${e.target.value}`);
+                setTimeout(() => setToastMessage(null), 2500);
+              }}
+              className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer font-medium w-full"
+            >
+              <option value="English" className="bg-[#052429] text-white">English</option>
+              <option value="Tamil" className="bg-[#052429] text-white">தமிழ் (Tamil)</option>
+              <option value="Hindi" className="bg-[#052429] text-white">हिन्दी (Hindi)</option>
+            </select>
+          </div>
+
+          <button onClick={() => setActiveNav('profile')} className="flex items-center gap-2 mb-4 px-1 w-full text-left hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 rounded-full bg-[#00e575] text-[#052429] font-black flex items-center justify-center text-xs shrink-0">
+              AK
+            </div>
+            <div className="text-left text-white overflow-hidden">
+              <div className="font-bold text-xs truncate">{(profile?.name || 'Loading...')}</div>
+              <div className="text-[10px] text-slate-400 truncate">MRN: {(profile?.id || '---')}</div>
+            </div>
+          </button>
+          <Link
+            to="/doctor"
+            className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-[#00e575] bg-[#072d33] hover:bg-[#0a383f] border border-[#0e4851] rounded-lg transition-colors cursor-pointer"
+          >
+            <Stethoscope className="w-3.5 h-3.5" /> Doctor View
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-slate-300 bg-transparent hover:bg-red-950/40 hover:text-red-400 border border-transparent rounded-lg transition-colors cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Pane */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64 relative">
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-30 bg-[#052429] text-white border-b border-[#0e4851] h-16 flex items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-1.5 -ml-1.5 text-slate-300 hover:text-white rounded-lg focus:outline-none"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
+                <Activity className="w-4 h-4 stroke-[2.5]" />
+              </div>
+              <span className="font-bold text-sm tracking-tight text-white">
+                CareFlow <span className="text-[#00e575]">AI</span>
+              </span>
+            </Link>
+          </div>
+          <button onClick={handleLogout} className="p-1.5 text-slate-300 hover:text-red-400">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </header>
+
+        {/* Mobile Sidebar Off-canvas */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileMenuOpen(false)}
+                className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+                className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#052429] border-r border-[#0e4851] flex flex-col"
+              >
+                <div className="h-16 flex items-center justify-between px-5 border-b border-[#0e4851]">
+                  <span className="font-bold text-base tracking-tight text-white">Menu</span>
+                  <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 text-slate-300 hover:text-white">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                  {sidebarNav.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => { setActiveNav(item.id); setMobileMenuOpen(false) }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
+                        activeNav === item.id
+                          ? 'bg-[#00e575] text-[#052429]'
+                          : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4 shrink-0" />
+                      {item.label}
+                    </button>
+                  ))}
+                </nav>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-20">
         
         {/* Profile Section (Isolated) */}
         {activeNav === 'profile' && (
@@ -243,11 +283,11 @@ export function PatientDashboard() {
               <div className="space-y-4 text-sm">
                 <div>
                   <span className="text-slate-500 block mb-1">Full Name</span>
-                  <strong className="text-slate-900">{currentPatient.name}</strong>
+                  <strong className="text-slate-900">{(profile?.name || 'Loading...')}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Medical Record Number (MRN)</span>
-                  <strong className="text-slate-900">{currentPatient.id}</strong>
+                  <strong className="text-slate-900">{(profile?.id || '---')}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Date of Birth</span>
@@ -257,15 +297,15 @@ export function PatientDashboard() {
               <div className="space-y-4 text-sm">
                 <div>
                   <span className="text-slate-500 block mb-1">Primary Diagnosis</span>
-                  <strong className="text-slate-900">{currentPatient.primaryDiagnosis}</strong>
+                  <strong className="text-slate-900">{(profile).primaryDiagnosis}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Attending Physician</span>
-                  <strong className="text-slate-900">{currentPatient.attendingPhysician}</strong>
+                  <strong className="text-slate-900">{(profile).attendingPhysician}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Discharge Date</span>
-                  <strong className="text-slate-900">{currentPatient.dischargeDate}</strong>
+                  <strong className="text-slate-900">{(profile).dischargeDate}</strong>
                 </div>
               </div>
             </div>
@@ -282,7 +322,7 @@ export function PatientDashboard() {
                     <span className="text-xs font-bold uppercase tracking-wider text-[#052429] bg-[#e6fcf1] border border-[#a7f3d0] px-2.5 py-0.5 rounded-full">
                       Post-Discharge Recovery Plan
                     </span>
-                    <span className="text-xs text-slate-500 font-mono">Discharged: {currentPatient.dischargeDate}</span>
+                    <span className="text-xs text-slate-500 font-mono">Discharged: {(profile).dischargeDate}</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mt-2">
                     Good morning, Arun
@@ -294,14 +334,14 @@ export function PatientDashboard() {
 
                 {/* Quick hospital record summary */}
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-                  <div><strong className="text-slate-800">Primary Diagnosis:</strong> {currentPatient.primaryDiagnosis}</div>
-                  <div><strong className="text-slate-800">Attending Physician:</strong> {currentPatient.attendingPhysician}</div>
+                  <div><strong className="text-slate-800">Primary Diagnosis:</strong> {(profile).primaryDiagnosis}</div>
+                  <div><strong className="text-slate-800">Attending Physician:</strong> {(profile).attendingPhysician}</div>
                 </div>
               </div>
             </div>
 
             {/* TOP ROW: SECTION B (NEXT ACTION) & SECTION C (FOLLOW-UP PROGRESS) */}
-            {(activeNav === 'dashboard' || activeNav === 'plan') && (
+            {(['dashboard', 'plan', 'upcoming', 'tests', 'help'].includes(activeNav)) && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
                 {/* SECTION B: NEXT ACTION — MOST PROMINENT CARD */}
                 <div className="lg:col-span-2">
@@ -425,7 +465,7 @@ export function PatientDashboard() {
             )}
 
             {/* SECTION F: NEEDS REVIEW ALERT TRAY */}
-            {(activeNav === 'dashboard' || activeNav === 'plan') && needsReviewTasks.length > 0 && (
+            {(['dashboard', 'plan', 'upcoming', 'tests', 'help'].includes(activeNav)) && needsReviewTasks.length > 0 && (
               <div className="mb-8 bg-amber-50/80 border border-amber-300 rounded-xl p-5 shadow-xs">
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200">
@@ -462,7 +502,7 @@ export function PatientDashboard() {
             )}
 
             {/* SECTION D & E: UNIFIED TASK LIST WITH FILTERS */}
-            {(activeNav === 'dashboard' || activeNav === 'plan') && (
+            {(['dashboard', 'plan', 'upcoming', 'tests', 'help'].includes(activeNav)) && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-4">
                   <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -537,7 +577,7 @@ export function PatientDashboard() {
             )}
 
             {/* SECTION G & H: RECOVERY TIMELINE & AI REMINDER ACTIVITY */}
-            {(activeNav === 'dashboard' || activeNav === 'timeline' || activeNav === 'reminders') && (
+            {(['dashboard', 'timeline', 'reminders', 'plan'].includes(activeNav)) && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
                 {/* SECTION G: TIMELINE */}
                 <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
@@ -604,10 +644,10 @@ export function PatientDashboard() {
                         </span>
                       </div>
                       <p className="text-slate-600 mt-1.5">
-                        <strong>Scheduled:</strong> {demoReminderSimulation.scheduledTime}
+                        <strong>Scheduled:</strong> {({} as any).scheduledTime}
                       </p>
                       <p className="text-slate-600 mt-0.5">
-                        <strong>Purpose:</strong> {demoReminderSimulation.purpose}
+                        <strong>Purpose:</strong> {({} as any).purpose}
                       </p>
 
                       {/* Retry Tree Simulation */}
@@ -642,7 +682,7 @@ export function PatientDashboard() {
             )}
 
             {/* BOTTOM ROW: MEDICATIONS, INSTRUCTIONS & WARNING SIGNS */}
-            {(activeNav === 'dashboard') && (
+            {(['dashboard', 'instructions', 'tests'].includes(activeNav)) && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
                 {/* Medications */}
                 <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
@@ -651,7 +691,7 @@ export function PatientDashboard() {
                       <Pill className="w-4 h-4 text-teal-800" /> Prescribed Medications
                     </h3>
                     <div className="space-y-3">
-                      {demoMedications.map((m) => (
+                      {[]?.map((m) => (
                         <div key={m.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                           <div className="font-bold text-slate-900 text-sm">{m.medicationName} ({m.dosage})</div>
                           <div className="text-slate-700 font-medium mt-0.5">{m.frequency}</div>
@@ -673,7 +713,7 @@ export function PatientDashboard() {
                       <FileText className="w-4 h-4 text-teal-800" /> Care Instructions
                     </h3>
                     <div className="space-y-3">
-                      {demoCareInstructions.map((ci) => (
+                      {[]?.map((ci) => (
                         <div key={ci.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                           <div className="font-bold text-slate-900 text-sm">{ci.title}</div>
                           <p className="text-slate-600 mt-1 leading-relaxed text-xs">{ci.description}</p>
@@ -697,7 +737,7 @@ export function PatientDashboard() {
                       Seek immediate medical care if you experience:
                     </p>
                     <div className="space-y-2.5">
-                      {demoWarnings.map((w) => (
+                      {[]?.map((w) => (
                         <div key={w.id} className="p-3 bg-white rounded-xl border border-red-200 text-xs shadow-2xs">
                           <div className="font-bold text-red-900">{w.symptom}</div>
                           <div className="text-slate-700 mt-1 font-medium text-[11px]">{w.action}</div>
@@ -714,9 +754,9 @@ export function PatientDashboard() {
             )}
           </>
         )}
-      </main>
-
-      {/* Task Details Modal */}
+      
+        </main>
+{/* Task Details Modal */}
       <AnimatePresence>
         {selectedTaskModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
@@ -789,6 +829,8 @@ export function PatientDashboard() {
           </div>
         )}
       </AnimatePresence>
+    
+      </div>
     </div>
   );
 }

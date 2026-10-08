@@ -1,33 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Activity,
-  Users,
-  ClockAlert,
-  AlertTriangle,
-  CheckCircle2,
-  Search,
-  Check,
-  LogOut,
-  ShieldCheck,
-  User,
-  PhoneCall,
-  X,
-  Calendar,
-  ArrowRight,
-  Clock,
-  UserCheck,
-} from 'lucide-react';
-import {
-  demoPatients,
-  demoCareCoordinationPriorities,
-  demoNeedsReviewQueue,
-  demoOverdueItems,
-  demoUpcomingDeadlines,
-  demoReminderSimulation,
-  demoDashboardStats,
-} from '../data/demoData';
+import { Activity, Users, ClockAlert, AlertTriangle, CheckCircle2, Search, Check, LogOut, ShieldCheck, User, PhoneCall, X, Calendar, ArrowRight, Clock, UserCheck, Menu, UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History, BellRing, HelpCircle } from 'lucide-react';
 import {
   StatusBadge,
   CareCoordinationPriorityBadge,
@@ -45,7 +20,49 @@ export function DoctorDashboard() {
   const { logout } = useAuth();
 
   // Navigation tab state
-  const [activeNav, setActiveNav] = useState<'dashboard' | 'patients' | 'priority' | 'review' | 'escalations' | 'activity'>('dashboard');
+  const [activeNav, setActiveNav] = useState('dashboard');
+
+  const sidebarNav = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'patients', label: 'Patients', icon: Users },
+    { id: 'upload', label: 'Document Upload', icon: UploadCloud },
+    { id: 'followup', label: 'Follow-up Tasks', icon: ListTodo },
+    { id: 'review', label: 'Needs Human Review', icon: AlertTriangle },
+    { id: 'priority', label: 'Priority Queue', icon: ClockAlert },
+    { id: 'reminders', label: 'Reminders', icon: PhoneCall },
+    { id: 'timeline', label: 'Timeline / Audit', icon: Clock },
+  ];
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [stats, setStats] = useState({ totalPatients: 0, pendingFollowUps: 0, highPriority: 0, needsReview: 0, overdue: 0 });
+  const [priorityList, setPriorityList] = useState<any[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<any[]>([]);
+  const [overdueItems, setOverdueItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [s, p, r, o] = await Promise.all([
+          api.getDoctorStats(),
+          api.getDoctorPatients(),
+          api.getNeedsReview(),
+          api.getOverdue()
+        ]);
+        setStats(s);
+        setPriorityList(p);
+        setReviewQueue(r);
+        setOverdueItems(o);
+      } catch(e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,9 +70,23 @@ export function DoctorDashboard() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'needs-review' | 'overdue'>('all');
 
   // Interactive local states for demo actions
-  const [priorityList] = useState<CareCoordinationPriorityItem[]>(demoCareCoordinationPriorities);
-  const [reviewQueue, setReviewQueue] = useState<NeedsReviewItem[]>(demoNeedsReviewQueue);
+  
+  
   const [inspectedPatient, setInspectedPatient] = useState<Patient | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadResult, setUploadResult] = useState<any>(null);
+  const handleUpload = async () => {
+    if(!uploadFile) return;
+    try {
+      setToastMessage("Uploading document...");
+      const res = await api.uploadDoc(uploadFile);
+      setUploadResult(res); setToastMessage("Document uploaded successfully.");
+      setUploadFile(null);
+    } catch(e) {
+      setToastMessage("Upload failed.");
+    }
+  };
+
   const [selectedReviewItem, setSelectedReviewItem] = useState<NeedsReviewItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -99,7 +130,7 @@ export function DoctorDashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-20">
+        <div className="flex bg-[#f8fafc] text-slate-900 min-h-screen">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -107,7 +138,7 @@ export function DoctorDashboard() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-20 right-4 z-50 bg-[#052429] border border-[#00e575] text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2"
+            className="fixed top-4 right-4 z-[60] bg-[#052429] border border-[#00e575] text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2"
           >
             <CheckCircle2 className="w-4 h-4 text-[#00e575]" />
             <span>{toastMessage}</span>
@@ -115,109 +146,137 @@ export function DoctorDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Enterprise Deep Dark Teal Header */}
-      <header className="sticky top-0 z-40 bg-[#052429] text-white border-b border-[#0e4851] shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-16 flex items-center justify-between">
-            {/* Brand */}
-            <div className="flex items-center gap-3">
-              <Link to="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
-                  <Activity className="w-4.5 h-4.5 stroke-[2.5]" />
-                </div>
-                <span className="font-bold text-base tracking-tight hidden sm:inline text-white">
-                  CareFlow <span className="text-[#00e575]">AI</span>
-                </span>
-              </Link>
-              <span className="text-[11px] bg-[#0a383f] text-[#00e575] font-bold px-2.5 py-0.5 rounded-full border border-[#0e4851]">
-                Doctor & Care Coordinator Command Center
-              </span>
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex flex-col w-64 bg-[#052429] border-r border-[#0e4851] flex-shrink-0 fixed inset-y-0 z-40">
+        <div className="h-16 flex items-center gap-3 px-5 border-b border-[#0e4851]">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
+              <Activity className="w-4.5 h-4.5 stroke-[2.5]" />
             </div>
-
-            {/* Navigation links (Section 12) */}
-            <nav className="hidden lg:flex items-center gap-1 text-xs">
-              {[
-                { id: 'dashboard', label: 'Dashboard' },
-                { id: 'patients', label: 'Patients' },
-                { id: 'priority', label: 'Priority Queue' },
-                { id: 'review', label: 'Needs Review' },
-                { id: 'escalations', label: 'Overdue & Deadlines' },
-                { id: 'activity', label: 'Activity' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveNav(tab.id as any)}
-                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                    activeNav === tab.id
-                      ? 'bg-[#00e575] text-[#052429]'
-                      : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-
-            {/* Clinician Profile */}
-            <div className="flex items-center gap-3">
-              <Link
-                to="/patient"
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-[#00e575] bg-[#072d33] hover:bg-[#0a383f] border border-[#0e4851] rounded-lg transition-colors"
-                title="Switch to Patient Portal"
-              >
-                <User className="w-3.5 h-3.5" /> Patient View
-              </Link>
-
-              <div className="flex items-center gap-2 pl-2 border-l border-[#0e4851] text-xs">
-                <div className="w-8 h-8 rounded-full bg-[#0a383f] text-[#00e575] border border-[#145e69] font-black flex items-center justify-center text-xs">
-                  MP
-                </div>
-                <div className="hidden md:block text-left text-white leading-tight">
-                  <div className="font-bold text-xs">Dr. Meera Patel</div>
-                  <div className="text-[10px] text-slate-400">Chief Coordinator • Cardiology</div>
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-[#072d33] transition-colors"
-                title="Sign Out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+            <span className="font-bold text-base tracking-tight text-white line-clamp-1">
+              CareFlow <span className="text-[#00e575]">AI</span>
+            </span>
+          </Link>
         </div>
-      </header>
+        
+        <div className="px-5 py-3 border-b border-[#0e4851]">
+          <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Role</div>
+          <div className="text-xs font-bold text-[#00e575]">Coordinator Command</div>
+        </div>
 
-      {/* Mobile Navigation (Scrollable) */}
-      <div className="lg:hidden bg-[#052429] border-b border-[#0e4851] overflow-x-auto hide-scrollbar sticky top-16 z-30">
-        <div className="flex items-center px-4 py-2 gap-2 w-max">
-          {[
-            { id: 'dashboard', label: 'Dashboard' },
-            { id: 'patients', label: 'Patients' },
-            { id: 'priority', label: 'Priority Queue' },
-            { id: 'review', label: 'Needs Review' },
-            { id: 'escalations', label: 'Overdue & Deadlines' },
-            { id: 'activity', label: 'Activity' },
-          ].map((tab) => (
+        <nav className="flex-1 overflow-y-auto hide-scrollbar py-4 px-3 space-y-1">
+          {sidebarNav.map((item) => (
             <button
-              key={tab.id}
-              onClick={() => setActiveNav(tab.id as any)}
-              className={`px-3 py-1.5 text-xs rounded-full font-semibold transition-colors ${
-                activeNav === tab.id
+              key={item.id}
+              onClick={() => setActiveNav(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
+                activeNav === item.id
                   ? 'bg-[#00e575] text-[#052429]'
-                  : 'text-slate-300 bg-[#0a383f] border border-[#0e4851]'
+                  : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
               }`}
             >
-              {tab.label}
+              <item.icon className="w-4 h-4 shrink-0" />
+              {item.label}
             </button>
           ))}
-        </div>
-      </div>
+        </nav>
 
-      {/* Main Body */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <div className="p-4 border-t border-[#0e4851] space-y-2">
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <div className="w-8 h-8 rounded-full bg-[#0a383f] text-[#00e575] border border-[#145e69] font-black flex items-center justify-center text-xs shrink-0">
+              MP
+            </div>
+            <div className="text-left text-white overflow-hidden">
+              <div className="font-bold text-xs truncate">Dr. Meera Patel</div>
+              <div className="text-[10px] text-slate-400 truncate">Coordinator</div>
+            </div>
+          </div>
+          <Link
+            to="/patient"
+            className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-[#00e575] bg-[#072d33] hover:bg-[#0a383f] border border-[#0e4851] rounded-lg transition-colors"
+          >
+            <User className="w-3.5 h-3.5" /> Patient View
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-slate-300 bg-transparent hover:bg-red-950/40 hover:text-red-400 border border-transparent rounded-lg transition-colors cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Pane */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64 relative">
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-30 bg-[#052429] text-white border-b border-[#0e4851] h-16 flex items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-1.5 -ml-1.5 text-slate-300 hover:text-white rounded-lg focus:outline-none"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
+                <Activity className="w-4 h-4 stroke-[2.5]" />
+              </div>
+              <span className="font-bold text-sm tracking-tight text-white">
+                CareFlow <span className="text-[#00e575]">AI</span>
+              </span>
+            </Link>
+          </div>
+          <button onClick={handleLogout} className="p-1.5 text-slate-300 hover:text-red-400">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </header>
+
+        {/* Mobile Sidebar Off-canvas */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileMenuOpen(false)}
+                className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+                className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#052429] border-r border-[#0e4851] flex flex-col"
+              >
+                <div className="h-16 flex items-center justify-between px-5 border-b border-[#0e4851]">
+                  <span className="font-bold text-base tracking-tight text-white">Menu</span>
+                  <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 text-slate-300 hover:text-white">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                  {sidebarNav.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => { setActiveNav(item.id); setMobileMenuOpen(false) }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
+                        activeNav === item.id
+                          ? 'bg-[#00e575] text-[#052429]'
+                          : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4 shrink-0" />
+                      {item.label}
+                    </button>
+                  ))}
+                </nav>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-20">
         {/* Top Header & Core Question (Section 5) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 mb-6">
           <div>
@@ -243,7 +302,7 @@ export function DoctorDashboard() {
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-teal-800" /> Total Patients
             </div>
-            <div className="my-2 text-2xl font-black text-slate-900">{demoDashboardStats.totalPatients}</div>
+            <div className="my-2 text-2xl font-black text-slate-900">{stats.totalPatients}</div>
             <div className="text-[11px] text-slate-500">Active discharged cohort</div>
           </div>
 
@@ -252,7 +311,7 @@ export function DoctorDashboard() {
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Follow-ups
             </div>
-            <div className="my-2 text-2xl font-black text-slate-900">{demoDashboardStats.pendingFollowUps}</div>
+            <div className="my-2 text-2xl font-black text-slate-900">{stats.pendingFollowUps}</div>
             <div className="text-[11px] text-amber-700 font-medium">Scheduled / In Progress</div>
           </div>
 
@@ -279,7 +338,7 @@ export function DoctorDashboard() {
             <div className="text-xs font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
               <ClockAlert className="w-3.5 h-3.5 text-red-600" /> Overdue
             </div>
-            <div className="my-2 text-2xl font-black text-red-700">{demoOverdueItems.length}</div>
+            <div className="my-2 text-2xl font-black text-red-700">{overdueItems.length}</div>
             <div className="text-[11px] text-red-700 font-medium">Deadline lapsed</div>
           </div>
         </div>
@@ -287,7 +346,7 @@ export function DoctorDashboard() {
         {/* ========================================================
             SECTION 6: CARE COORDINATION PRIORITY (PROMINENT FEATURE)
             ======================================================== */}
-        {(activeNav === 'dashboard' || activeNav === 'priority') && (
+        {(activeNav === 'dashboard' || activeNav === 'priority' || activeNav === 'followup') && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-7 shadow-xs mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
@@ -417,7 +476,7 @@ export function DoctorDashboard() {
         {/* ========================================================
             SECTION 8: NEEDS HUMAN REVIEW QUEUE
             ======================================================== */}
-        {(activeNav === 'dashboard' || activeNav === 'review') && (
+        {(activeNav === 'dashboard' || activeNav === 'review' || activeNav === 'followup') && (
           <div className="bg-white rounded-xl border border-amber-300 shadow-xs p-6 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-100 mb-4">
             <div className="flex items-center gap-2">
@@ -621,7 +680,7 @@ export function DoctorDashboard() {
         {/* ========================================================
             SECTION 9 & 11: UPCOMING, OVERDUE & AI REMINDER ACTIVITY
             ======================================================== */}
-        {(activeNav === 'dashboard' || activeNav === 'escalations' || activeNav === 'activity') && (
+        {(activeNav === 'dashboard' || activeNav === 'reminders' || activeNav === 'timeline' || activeNav === 'followup') && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           {/* SECTION 9: OVERDUE FOLLOW-UPS */}
           <div className="bg-red-50/60 rounded-xl border border-red-200 p-6 shadow-xs h-full flex flex-col justify-between">
@@ -636,7 +695,7 @@ export function DoctorDashboard() {
               </div>
 
               <div className="space-y-3">
-                {demoOverdueItems.map((od) => (
+                {overdueItems.map((od) => (
                   <div key={od.id} className="p-4 bg-white rounded-xl border border-red-200 text-xs shadow-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-red-900 text-sm">{od.patientName}</span>
@@ -675,7 +734,7 @@ export function DoctorDashboard() {
               </h3>
 
               <div className="space-y-3">
-                {demoUpcomingDeadlines.map((ud) => (
+                {overdueItems.map((ud) => (
                   <div key={ud.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-slate-900">{ud.patientName}</span>
@@ -744,9 +803,61 @@ export function DoctorDashboard() {
           </div>
         </div>
         )}
-      </main>
+      
+        {(activeNav === 'upload') && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-3xl mx-auto mt-8">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-200">
+                <UploadCloud className="w-5 h-5 text-teal-800" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Upload Clinical Document</h2>
+                <p className="text-xs text-slate-500">Securely ingest Discharge Summaries for AI Extraction</p>
+              </div>
+            </div>
+            
+            <label className="border-2 border-dashed border-slate-300 rounded-xl p-10 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+              <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => {
+                 if(e.target.files && e.target.files[0]) setUploadFile(e.target.files[0]);
+              }} />
+              <div className="w-16 h-16 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-4 group-hover:shadow-md transition-shadow">
+                <FileText className="w-8 h-8 text-slate-400 group-hover:text-teal-600 transition-colors" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 mb-1">{uploadFile ? uploadFile.name : "Click to select or drag and drop"}</h3>
+              <p className="text-xs text-slate-500 mb-4">Supported formats: PDF, DOCX, XLS, XLSX</p>
+              <div className="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-lg shadow-xs transition-colors">
+                {uploadFile ? "Change File" : "Select File"}
+              </div>
+            </label>
+            {uploadFile && (
+              <button onClick={handleUpload} className="mt-4 w-full py-3 bg-[#00e575] hover:bg-[#00cb68] text-[#052429] font-bold rounded-xl shadow-md transition-colors">
+                Confirm & Upload Document
+              </button>
+            )}
+            
+            {uploadResult && (
+              <div className="mt-6 bg-red-50/80 border border-red-300 rounded-xl p-4 flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-red-900 font-bold text-sm">
+                  <AlertTriangle className="w-5 h-5 text-red-600" /> ⚠ Needs Manual Correction
+                </div>
+                <div className="text-xs text-red-800 font-medium pl-2">
+                  <strong className="block mb-1">Reason:</strong>
+                  "Patient identifier could not be confidently matched."
+                </div>
+                <div className="text-[11px] text-slate-500 mt-2 pl-2">Document ID: {uploadResult.documentId}</div>
+              </div>
+            )}
+            
 
-      {/* Review Modal (for resolving Needs Human Review queue items) */}
+            <div className="mt-4 flex items-center gap-2 text-[11px] text-slate-600 bg-slate-100 p-3 rounded-lg border border-slate-200">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <p>This is a frontend demonstration interface. Uploaded documents will not be sent to any backend AI processing engine during Phase 1.</p>
+            </div>
+          </div>
+        )}
+
+        </main>
+{/* Review Modal (for resolving Needs Human Review queue items) */}
       <AnimatePresence>
         {selectedReviewItem && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
@@ -888,6 +999,8 @@ export function DoctorDashboard() {
           </div>
         )}
       </AnimatePresence>
+    
+      </div>
     </div>
   );
 }

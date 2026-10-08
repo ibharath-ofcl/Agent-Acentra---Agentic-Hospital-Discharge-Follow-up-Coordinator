@@ -1,92 +1,74 @@
-// ============================================================
-// CareFlow AI — Demo Authentication Provider Component
-// Phase 1: Frontend-only demo authentication.
-// Provides local context state and sessionStorage persistence.
-// ============================================================
+import React, { createContext, useState, useEffect } from 'react';
+import type { AuthState, AuthUser, LoginCredentials } from '../types';
 
-import React, { useState, useCallback } from 'react';
-import { AuthContext } from './authContextDef';
-import { DEMO_CREDENTIALS } from '../types';
-import type { AuthUser, AuthState, LoginResult } from '../types';
+interface AuthContextType extends AuthState {
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => void;
+}
 
-const STORAGE_KEY = 'careflow_auth';
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [auth, setAuth] = useState<AuthState>(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && parsed.isAuthenticated && parsed.user) {
-          return parsed;
-        }
-      }
-    } catch {
-      // Ignore parse errors from stale session data
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role') as 'doctor' | 'patient';
+    const name = localStorage.getItem('name');
+    const ptId = localStorage.getItem('patientId');
+
+    if (token && role && name) {
+      return {
+        isAuthenticated: true,
+        user: { id: ptId || '1', role, name, email: '' },
+        token
+      };
     }
-    return { user: null, isAuthenticated: false };
+    return { isAuthenticated: false, user: null, token: null };
   });
 
-  const login = useCallback(
-    async (username: string, password: string): Promise<LoginResult> => {
-      const trimmedUser = username.trim();
-      const trimmedPass = password.trim();
+  const login = async (credentials: LoginCredentials) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
+      });
 
-      // Subtle, tactile micro-delay (180ms) for realistic interaction feedback
-      await new Promise((resolve) => setTimeout(resolve, 180));
-
-      if (
-        trimmedUser === DEMO_CREDENTIALS.patient.username &&
-        trimmedPass === DEMO_CREDENTIALS.patient.password
-      ) {
-        const user: AuthUser = {
-          username: DEMO_CREDENTIALS.patient.username,
-          role: DEMO_CREDENTIALS.patient.role,
-          name: DEMO_CREDENTIALS.patient.name,
-        };
-        const newState: AuthState = { user, isAuthenticated: true };
-        setAuth(newState);
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-        return { success: true, role: 'patient' };
+      if (!response.ok) {
+        throw new Error('Invalid credentials');
       }
 
-      if (
-        trimmedUser === DEMO_CREDENTIALS.doctor.username &&
-        trimmedPass === DEMO_CREDENTIALS.doctor.password
-      ) {
-        const user: AuthUser = {
-          username: DEMO_CREDENTIALS.doctor.username,
-          role: DEMO_CREDENTIALS.doctor.role,
-          name: DEMO_CREDENTIALS.doctor.name,
-        };
-        const newState: AuthState = { user, isAuthenticated: true };
-        setAuth(newState);
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-        return { success: true, role: 'doctor' };
+      const data = await response.json();
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('role', data.role);
+      localStorage.setItem('name', data.name);
+      if (data.patient_id) {
+        localStorage.setItem('patientId', data.patient_id);
       }
 
-      return {
-        success: false,
-        error: 'Invalid username or password. Please use the demo credentials provided below.',
-      };
-    },
-    []
-  );
+      setAuth({
+        isAuthenticated: true,
+        user: { id: data.patient_id || '1', role: data.role, name: data.name, email: credentials.email },
+        token: data.access_token
+      });
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  };
 
-  const logout = useCallback(() => {
-    setAuth({ user: null, isAuthenticated: false });
-    sessionStorage.removeItem(STORAGE_KEY);
-  }, []);
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('name');
+    localStorage.removeItem('patientId');
+    setAuth({ isAuthenticated: false, user: null, token: null });
+
+    // Prevent browser back button from accessing secure pages
+    window.location.replace('/login');
+  };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user: auth.user,
-        isAuthenticated: auth.isAuthenticated,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ ...auth, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

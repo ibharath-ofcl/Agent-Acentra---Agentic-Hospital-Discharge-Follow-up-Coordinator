@@ -1,59 +1,6 @@
-@import "tailwindcss";
-
-@theme {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-
-  /* Acentra-inspired Deep Dark Teal Enterprise Shell */
-  --color-teal-brand-950: #03181b;
-  --color-teal-brand-900: #052429;
-  --color-teal-brand-850: #072d33;
-  --color-teal-brand-800: #0a383f;
-  --color-teal-brand-700: #0e4851;
-  --color-teal-brand-600: #145e69;
-  --color-teal-brand-500: #1c7986;
-
-  /* Electric / Bright Green Accent */
-  --color-accent-green: #00e575;
-  --color-accent-green-hover: #00cb68;
-  --color-accent-green-light: #e6fcf1;
-  --color-accent-green-dark: #008742;
-
-  /* Supporting Healthcare Palette */
-  --color-slate-50: #f8fafc;
-  --color-slate-100: #f1f5f9;
-  --color-slate-200: #e2e8f0;
-  --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;
-  --color-slate-500: #64748b;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-800: #1e293b;
-  --color-slate-900: #0f172a;
-
-  /* Priority & Status Signals */
-  --color-urgent-red: #ef4444;
-  --color-urgent-red-bg: #fef2f2;
-  --color-urgent-red-border: #fecaca;
-
-  --color-priority-orange: #f97316;
-  --color-priority-amber-bg: #fff7ed;
-  --color-priority-amber-border: #fed7aa;
-
-  --color-routine-green: #10b981;
-  --color-routine-green-bg: #ecfdf5;
-  --color-routine-green-border: #a7f3d0;
-
-  --color-review-amber: #f59e0b;
-  --color-review-amber-bg: #fffbeb;
-  --color-review-amber-border: #fde68a;
-
-  /* Base Semantic Surfaces */
-  --color-surface: #ffffff;
-  --color-surface-subtle: #f8fafc;
-  --color-surface-card: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-subtle: #edf2f7;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Base styles */
 * {
@@ -69,8 +16,6 @@ html {
 }
 
 body {
-  font-family: var(--font-sans);
-  color: var(--color-slate-900);
   background-color: #f8fafc;
   line-height: 1.5;
 }
@@ -96,7 +41,7 @@ body {
 
 /* Accessible focus ring */
 :focus-visible {
-  outline: 2px solid var(--color-accent-green);
+  outline: 2px solid #00e575;
   outline-offset: 2px;
   border-radius: 6px;
 }

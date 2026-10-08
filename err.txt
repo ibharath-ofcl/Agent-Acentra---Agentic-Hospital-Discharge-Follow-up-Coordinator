@@ -1,0 +1,21 @@
+[31m✗[39m Build failed in 2.26s
+[31merror during build:
+[31mBuild failed with 1 error:
+
+[31m[builtin:vite-transform] [0mUnexpected token
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/pages/PatientDashboard.tsx:7:3 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m7 │[0m [38;5;249m [0m[38;5;249m [0m([38;5;249mp[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249m)[0m[38;5;249m,[0m
+ [38;5;240m  │[0m   ┬  
+ [38;5;240m  │[0m   ╰── 
+[38;5;246m───╯[0m
+[31m
+    at aggregateBindingErrorsIntoJsError (file:///C:/Users/Administrator/Downloads/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/node_modules/rolldown/dist/shared/error-Dsqzw0Oa.mjs:49:18)
+    at unwrapBindingResult (file:///C:/Users/Administrator/Downloads/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/node_modules/rolldown/dist/shared/error-Dsqzw0Oa.mjs:19:128)
+    at #build (file:///C:/Users/Administrator/Downloads/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/node_modules/rolldown/dist/shared/rolldown-D_vNlorD.mjs:133:34)
+    at async buildEnvironment (file:///C:/Users/Administrator/Downloads/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/node_modules/vite/dist/node/chunks/node.js:34660:66)
+    at async Object.build (file:///C:/Users/Administrator/Downloads/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/node_modules/vite/dist/node/chunks/node.js:35081:19)
+    at async Object.buildApp (file:///C:/Users/Administrator/Downloads/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/node_modules/vite/dist/node/chunks/node.js:35078:153)
+    at async CAC.<anonymous> (file:///C:/Users/Administrator/Downloads/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/Acentra%20-%20Agentic%20Hospital%20Discharge%20&%20Follow-up%20Coordinator/node_modules/vite/dist/node/cli.js:780:3) {
+  errors: [Getter/Setter]
+}[39m
