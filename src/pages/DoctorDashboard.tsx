@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Users, ClockAlert, AlertTriangle, CheckCircle2, Search, Check, LogOut, ShieldCheck, User, PhoneCall, X, Calendar, ArrowRight, Clock, UserCheck, Menu, UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History, BellRing, HelpCircle } from 'lucide-react';
+import { Activity, Users, ClockAlert, AlertTriangle, CheckCircle2, Search, Check, LogOut, ShieldCheck, User, PhoneCall, X, Calendar, ArrowRight, Clock, UserCheck, Menu, UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History, BellRing, HelpCircle, FileText } from 'lucide-react';
 import {
   StatusBadge,
   CareCoordinationPriorityBadge,
@@ -50,10 +50,10 @@ export function DoctorDashboard() {
           api.getNeedsReview(),
           api.getOverdue()
         ]);
-        setStats(s);
-        setPriorityList(p);
-        setReviewQueue(r);
-        setOverdueItems(o);
+        if (s && typeof s === 'object') setStats(s);
+        setPriorityList(Array.isArray(p) ? p : []);
+        setReviewQueue(Array.isArray(r) ? r : []);
+        setOverdueItems(Array.isArray(o) ? o : []);
       } catch(e) {
         console.error(e);
       } finally {

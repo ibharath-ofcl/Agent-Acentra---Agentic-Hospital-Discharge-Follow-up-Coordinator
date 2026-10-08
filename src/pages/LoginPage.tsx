@@ -28,22 +28,21 @@ export function LoginPage() {
     redirectedFrom === '/doctor' ? 'doctor' : 'patient';
 
   const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
-  const [username, setUsername] = useState(initialRole === 'doctor' ? 'doctor@acentra.com' : 'patient@acentra.com');
-  const [password, setPassword] = useState('password');
+  const [username, setUsername] = useState(initialRole === 'doctor' ? 'doctor' : 'patient');
+  const [password, setPassword] = useState(initialRole === 'doctor' ? 'doctor123' : 'patient123');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
     setErrorMessage(null);
     if (role === 'patient') {
-      setUsername('patient@acentra.com');
-      setPassword('password');
+      setUsername('patient');
+      setPassword('patient123');
     } else {
-      setUsername('doctor@acentra.com');
-      setPassword('password');
+      setUsername('doctor');
+      setPassword('doctor123');
     }
   };
 
@@ -60,10 +59,11 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await login(username.trim(), password.trim());
+      const result = await login(username.trim(), password.trim(), selectedRole);
 
       if (result.success) {
-        if (result.role === 'patient') {
+        const targetRole = result.role || selectedRole;
+        if (targetRole === 'patient') {
           navigate('/patient', { replace: true });
         } else {
           navigate('/doctor', { replace: true });

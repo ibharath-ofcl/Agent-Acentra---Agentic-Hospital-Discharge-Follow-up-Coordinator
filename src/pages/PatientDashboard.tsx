@@ -43,8 +43,8 @@ export function PatientDashboard() {
           api.getPatientTimeline()
         ]);
         setProfile(me);
-        setTaskList(tsk);
-        setTimeline(tl);
+        setTaskList(Array.isArray(tsk) ? tsk : []);
+        setTimeline(Array.isArray(tl) ? tl : []);
       } catch(e) {
         console.error(e);
       } finally {
@@ -691,7 +691,7 @@ export function PatientDashboard() {
                       <Pill className="w-4 h-4 text-teal-800" /> Prescribed Medications
                     </h3>
                     <div className="space-y-3">
-                      {[]?.map((m) => (
+                      {([] as any[])?.map((m: any) => (
                         <div key={m.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                           <div className="font-bold text-slate-900 text-sm">{m.medicationName} ({m.dosage})</div>
                           <div className="text-slate-700 font-medium mt-0.5">{m.frequency}</div>
@@ -713,7 +713,7 @@ export function PatientDashboard() {
                       <FileText className="w-4 h-4 text-teal-800" /> Care Instructions
                     </h3>
                     <div className="space-y-3">
-                      {[]?.map((ci) => (
+                      {([] as any[])?.map((ci: any) => (
                         <div key={ci.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                           <div className="font-bold text-slate-900 text-sm">{ci.title}</div>
                           <p className="text-slate-600 mt-1 leading-relaxed text-xs">{ci.description}</p>
@@ -737,7 +737,7 @@ export function PatientDashboard() {
                       Seek immediate medical care if you experience:
                     </p>
                     <div className="space-y-2.5">
-                      {[]?.map((w) => (
+                      {([] as any[])?.map((w: any) => (
                         <div key={w.id} className="p-3 bg-white rounded-xl border border-red-200 text-xs shadow-2xs">
                           <div className="font-bold text-red-900">{w.symptom}</div>
                           <div className="text-slate-700 mt-1 font-medium text-[11px]">{w.action}</div>

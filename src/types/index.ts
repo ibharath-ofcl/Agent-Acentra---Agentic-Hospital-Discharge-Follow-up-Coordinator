@@ -237,14 +237,17 @@ export interface NeedsReviewItem {
 }
 
 export interface AuthUser {
-  username: string;
+  id?: string;
+  username?: string;
   role: UserRole;
   name: string;
+  email?: string;
 }
 
 export interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  token?: string | null;
 }
 
 export interface LoginResult {
@@ -256,7 +259,7 @@ export interface LoginResult {
 export interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<LoginResult>;
+  login: (username: string, password: string, preferredRole?: UserRole) => Promise<LoginResult>;
   logout: () => void;
 }
 
