@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Activity, User, Stethoscope, AlertCircle, ArrowLeft, ShieldCheck, KeyRound, Check } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import type { UserRole } from '../types';
@@ -48,16 +47,16 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#03181b] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#03181b] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Background ambient teal */}
       <div className="absolute inset-0 pointer-events-none opacity-30">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-[#0e4851] rounded-full blur-3xl" />
       </div>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+      <div className="w-full max-w-md relative z-10 flex flex-col items-center">
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white mb-6 transition-colors"
+          className="self-start inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white mb-6 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5 text-[#00e575]" /> Back to CareFlow AI
         </Link>
@@ -80,12 +79,8 @@ export function LoginPage() {
         </p>
       </div>
 
-      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-[#052429] border border-[#0e4851] py-8 px-6 shadow-2xl rounded-2xl sm:px-10"
-        >
+      <div className="mt-6 w-full max-w-md relative z-10">
+        <div className="bg-[#052429] border border-[#0e4851] py-8 px-6 shadow-2xl rounded-2xl sm:px-10">
           {/* Role selection tab */}
           <div className="mb-6">
             <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2.5">
@@ -187,7 +182,7 @@ export function LoginPage() {
               <span>Session stored locally in browser session storage</span>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

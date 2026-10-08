@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   Users,
@@ -25,13 +24,7 @@ export function DoctorExperienceSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
           {/* Visual Showcase */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.5 }}
-            className="order-2 lg:order-1 mt-10 lg:mt-0"
-          >
+          <div className="order-2 lg:order-1 mt-10 lg:mt-0">
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
@@ -92,16 +85,10 @@ export function DoctorExperienceSection() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Text Content */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="order-1 lg:order-2"
-          >
+          <div className="order-1 lg:order-2">
             <p className="text-xs font-bold text-teal-800 uppercase tracking-widest mb-3">
               For Care Teams & Doctors
             </p>
@@ -116,7 +103,7 @@ export function DoctorExperienceSection() {
 
             <div className="mt-8 grid sm:grid-cols-2 gap-4">
               {doctorFeatures.map((f) => (
-                <div key={f.label} className="flex gap-3">
+                <div key={f.label} className="flex gap-3 p-2 rounded-xl">
                   <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-800 flex items-center justify-center shrink-0 mt-0.5 border border-teal-200">
                     <f.icon className="w-4 h-4" />
                   </div>
@@ -137,7 +124,7 @@ export function DoctorExperienceSection() {
                 <ArrowRight className="w-4 h-4 text-[#00e575]" />
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

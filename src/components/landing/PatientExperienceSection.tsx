@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import {
   CalendarCheck,
   ListTodo,
@@ -27,12 +26,7 @@ export function PatientExperienceSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
           {/* Text */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.5 }}
-          >
+          <div>
             <p className="text-xs font-bold text-teal-800 uppercase tracking-widest mb-3">
               Patient Recovery Experience
             </p>
@@ -46,32 +40,24 @@ export function PatientExperienceSection() {
             <p className="mt-3 text-slate-600 leading-relaxed text-sm">
               Items with missing or ambiguous details are visibly flagged as "Needs Review" while your care coordinator resolves them behind the scenes.
             </p>
-          </motion.div>
+          </div>
 
-          {/* Feature grid */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-10 lg:mt-0"
-          >
-            <div className="grid grid-cols-2 gap-3">
-              {features.map((f, i) => (
-                <motion.div
+          {/* Feature grid - 8 items in 2 columns */}
+          <div className="mt-10 lg:mt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {features.map((f) => (
+                <div
                   key={f.label}
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.25, delay: 0.2 + i * 0.04 }}
-                  className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-teal-800/30 hover:bg-slate-100 transition-all"
+                  className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-teal-800/30 hover:bg-slate-100 transition-all shadow-xs"
                 >
-                  <f.icon className="w-5 h-5 text-teal-800 shrink-0" />
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0 border border-teal-200">
+                    <f.icon className="w-4 h-4 text-teal-800" />
+                  </div>
                   <span className="text-xs font-bold text-slate-900">{f.label}</span>
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

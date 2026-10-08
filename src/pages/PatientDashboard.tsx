@@ -222,54 +222,52 @@ export function PatientDashboard() {
         </div>
 
         {/* TOP ROW: SECTION B (NEXT ACTION) & SECTION C (FOLLOW-UP PROGRESS) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
           {/* SECTION B: NEXT ACTION — MOST PROMINENT CARD */}
           <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-[#052429] text-white rounded-2xl border border-[#0e4851] p-6 sm:p-7 shadow-lg relative overflow-hidden"
-            >
-              {/* Highlight badge */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#0e4851]">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#00e575] animate-pulse-soft" />
-                  <span className="text-xs font-black uppercase tracking-wider text-[#00e575]">
-                    NEXT ACTION
-                  </span>
-                </div>
-                <span className="text-xs font-semibold text-slate-300 bg-[#072d33] px-2.5 py-0.5 rounded-full border border-[#0e4851]">
-                  Primary Checkpoint
-                </span>
-              </div>
-
-              <div className="mt-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                    Cardiology follow-up
-                  </h2>
-                  <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
-                    <Calendar className="w-4 h-4 text-[#00e575]" />
-                    <span className="font-semibold text-white">15 October 2026</span>
-                    <span className="text-slate-500">•</span>
-                    <span className="text-slate-300">10:30 AM (Suite 204)</span>
+            <div className="bg-[#052429] text-white rounded-2xl border border-[#0e4851] p-6 sm:p-7 shadow-lg relative overflow-hidden h-full flex flex-col justify-between">
+              <div>
+                {/* Highlight badge */}
+                <div className="flex items-center justify-between pb-3 border-b border-[#0e4851]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#00e575] animate-pulse-soft" />
+                    <span className="text-xs font-black uppercase tracking-wider text-[#00e575]">
+                      NEXT ACTION
+                    </span>
                   </div>
-                  <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-                    Outpatient clinic evaluation with Dr. Meera Patel for post-MI rhythm check, stress review, and echo consultation.
-                  </p>
+                  <span className="text-xs font-semibold text-slate-300 bg-[#072d33] px-2.5 py-0.5 rounded-full border border-[#0e4851]">
+                    Primary Checkpoint
+                  </span>
                 </div>
 
-                <div className="flex flex-col sm:items-end gap-2.5 shrink-0">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-[#072d33] text-[#00e575] border border-[#0e4851]">
-                    Status: Pending
-                  </span>
-                  <button
-                    onClick={() => setSelectedTaskModal(nextAction)}
-                    className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-[#052429] bg-[#00e575] hover:bg-[#00cb68] rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    View Details
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                <div className="mt-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                      Cardiology follow-up
+                    </h2>
+                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-300 flex-wrap">
+                      <Calendar className="w-4 h-4 text-[#00e575] shrink-0" />
+                      <span className="font-semibold text-white">15 October 2026</span>
+                      <span className="text-slate-500">•</span>
+                      <span className="text-slate-300">10:30 AM (Suite 204)</span>
+                    </div>
+                    <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+                      Outpatient clinic evaluation with Dr. Meera Patel for post-MI rhythm check, stress review, and echo consultation.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:items-end gap-2.5 shrink-0">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-[#072d33] text-[#00e575] border border-[#0e4851]">
+                      Status: Pending
+                    </span>
+                    <button
+                      onClick={() => setSelectedTaskModal(nextAction)}
+                      className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-[#052429] bg-[#00e575] hover:bg-[#00cb68] rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      View Details
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -282,7 +280,7 @@ export function PatientDashboard() {
                   ✓ Verified by CareFlow Document Intelligence
                 </span>
               </div>
-            </motion.div>
+            </div>
           </div>
 
           {/* SECTION C: FOLLOW-UP PROGRESS */}
@@ -482,84 +480,102 @@ export function PatientDashboard() {
         </div>
 
         {/* SECTION G & H: RECOVERY TIMELINE & AI REMINDER ACTIVITY */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
           {/* SECTION G: TIMELINE */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-teal-800" /> Post-Discharge Timeline
-            </h3>
-            <div className="space-y-4 relative before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
-              {demoTimelineMilestones.map((m) => (
-                <div key={m.id} className="relative flex items-start gap-4 pl-8">
-                  <div
-                    className={`absolute left-2 top-1.5 w-3.5 h-3.5 rounded-full border-2 bg-white ${
-                      m.status === 'completed'
-                        ? 'border-emerald-500 bg-emerald-500'
-                        : m.status === 'current'
-                        ? 'border-[#00e575] bg-[#052429]'
-                        : 'border-slate-300'
-                    }`}
-                  />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900">{m.title}</span>
-                      <span className="text-[11px] font-mono text-slate-500">{m.date}</span>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-teal-800" /> Post-Discharge Timeline
+              </h3>
+              <div className="space-y-0">
+                {demoTimelineMilestones.map((m, index) => (
+                  <div key={m.id} className="flex gap-4 group">
+                    {/* Dedicated Column for Dot and Line */}
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 my-0.5 ${
+                          m.status === 'completed'
+                            ? 'border-emerald-500 bg-emerald-500'
+                            : m.status === 'current'
+                            ? 'border-[#00e575] bg-[#052429]'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      />
+                      {index < demoTimelineMilestones.length - 1 && (
+                        <div className="w-0.5 flex-1 bg-slate-200 my-1 min-h-[32px]" />
+                      )}
                     </div>
-                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{m.description}</p>
+                    {/* Content */}
+                    <div className="min-w-0 flex-1 pb-5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-slate-900">{m.title}</span>
+                        <span className="text-[11px] font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                          {m.date}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">{m.description}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Milestones tracked automatically against discharge orders</span>
             </div>
           </div>
 
           {/* SECTION H: REMINDER ACTIVITY SIMULATION */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <PhoneCall className="w-4 h-4 text-[#052429]" /> AI Reminder Activity
-              </h3>
-              <span className="text-[11px] text-teal-800 bg-teal-50 px-2 py-0.5 rounded font-semibold border border-teal-200">
-                Informational Simulation
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900">Upcoming Reminder Call</span>
-                <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Status: Scheduled
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <PhoneCall className="w-4 h-4 text-[#052429]" /> AI Reminder Activity
+                </h3>
+                <span className="text-[11px] text-teal-800 bg-teal-50 px-2 py-0.5 rounded font-semibold border border-teal-200">
+                  Informational Simulation
                 </span>
               </div>
-              <p className="text-slate-600 mt-1">
-                <strong>Scheduled:</strong> {demoReminderSimulation.scheduledTime}
-              </p>
-              <p className="text-slate-600 mt-0.5">
-                <strong>Purpose:</strong> {demoReminderSimulation.purpose}
-              </p>
 
-              {/* Retry Tree Simulation */}
-              <div className="mt-4 pt-3 border-t border-slate-200">
-                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                  Automated Fallback Sequence (If Unanswered):
-                </span>
-                <div className="mt-2 space-y-1.5 text-[11px] text-slate-600 font-mono">
-                  <div className="flex items-center gap-2 p-1.5 bg-white rounded border border-slate-200">
-                    <span className="text-amber-600 font-bold">Attempt 1</span>
-                    <span>— Automated Call (No answer)</span>
-                  </div>
-                  <div className="flex items-center gap-2 p-1.5 bg-white rounded border border-slate-200">
-                    <span className="text-teal-700 font-bold">Attempt 2</span>
-                    <span>— Scheduled for 14 Oct • 10:30 AM</span>
-                  </div>
-                  <div className="flex items-center gap-2 p-1.5 bg-white rounded border border-slate-200">
-                    <span className="text-slate-500 font-bold">Fallback</span>
-                    <span>— SMS Follow-up link (Pending)</span>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900">Upcoming Reminder Call</span>
+                  <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    Status: Scheduled
+                  </span>
+                </div>
+                <p className="text-slate-600 mt-1.5">
+                  <strong>Scheduled:</strong> {demoReminderSimulation.scheduledTime}
+                </p>
+                <p className="text-slate-600 mt-0.5">
+                  <strong>Purpose:</strong> {demoReminderSimulation.purpose}
+                </p>
+
+                {/* Retry Tree Simulation */}
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Automated Fallback Sequence (If Unanswered):
+                  </span>
+                  <div className="mt-2 space-y-1.5 text-[11px] text-slate-600 font-mono">
+                    <div className="flex items-center gap-2 p-2 bg-white rounded border border-slate-200">
+                      <span className="text-amber-600 font-bold">Attempt 1</span>
+                      <span>— Automated Call (No answer)</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 bg-white rounded border border-slate-200">
+                      <span className="text-teal-700 font-bold">Attempt 2</span>
+                      <span>— Scheduled for 14 Oct • 10:30 AM</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 bg-white rounded border border-slate-200">
+                      <span className="text-slate-500 font-bold">Fallback</span>
+                      <span>— SMS Follow-up link (Pending)</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 text-[11px] text-slate-500 flex items-center gap-1.5">
+            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               <span>Reminder calls are informational only and never provide medical advice.</span>
             </div>
@@ -567,53 +583,71 @@ export function PatientDashboard() {
         </div>
 
         {/* BOTTOM ROW: MEDICATIONS, INSTRUCTIONS & WARNING SIGNS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
           {/* Medications */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Pill className="w-4 h-4 text-teal-800" /> Prescribed Medications
-            </h3>
-            <div className="space-y-3">
-              {demoMedications.map((m) => (
-                <div key={m.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                  <div className="font-bold text-slate-900">{m.medicationName} ({m.dosage})</div>
-                  <div className="text-slate-600 mt-0.5">{m.frequency}</div>
-                  <div className="text-slate-500 mt-1 text-[11px]">{m.instructions}</div>
-                </div>
-              ))}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Pill className="w-4 h-4 text-teal-800" /> Prescribed Medications
+              </h3>
+              <div className="space-y-3">
+                {demoMedications.map((m) => (
+                  <div key={m.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <div className="font-bold text-slate-900 text-sm">{m.medicationName} ({m.dosage})</div>
+                    <div className="text-slate-700 font-medium mt-0.5">{m.frequency}</div>
+                    <div className="text-slate-500 mt-1 text-[11px] leading-relaxed">{m.instructions}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+              Take strictly as directed by your physician
             </div>
           </div>
 
           {/* Simple Care Instructions */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-teal-800" /> Care Instructions
-            </h3>
-            <div className="space-y-3">
-              {demoCareInstructions.map((ci) => (
-                <div key={ci.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                  <div className="font-bold text-slate-900">{ci.title}</div>
-                  <p className="text-slate-600 mt-1 leading-relaxed">{ci.description}</p>
-                </div>
-              ))}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-teal-800" /> Care Instructions
+              </h3>
+              <div className="space-y-3">
+                {demoCareInstructions.map((ci) => (
+                  <div key={ci.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <div className="font-bold text-slate-900 text-sm">{ci.title}</div>
+                    <p className="text-slate-600 mt-1 leading-relaxed text-xs">{ci.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+              Guidance from Hospital Nursing Protocol
             </div>
           </div>
 
           {/* Red Flag Warning Signs */}
-          <div className="bg-red-50/60 rounded-2xl border border-red-200 p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-red-950 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <HeartPulse className="w-4 h-4 text-red-600" /> Red Flag Warning Signs
-            </h3>
-            <p className="text-xs text-red-800 mb-3">
-              Seek immediate medical care if you experience:
-            </p>
-            <div className="space-y-2.5">
-              {demoWarnings.map((w) => (
-                <div key={w.id} className="p-3 bg-white rounded-xl border border-red-200 text-xs">
-                  <div className="font-bold text-red-900">{w.symptom}</div>
-                  <div className="text-slate-700 mt-0.5 font-medium">{w.action}</div>
-                </div>
-              ))}
+          <div className="bg-red-50/60 rounded-2xl border border-red-200 p-6 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-red-950 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <HeartPulse className="w-4 h-4 text-red-600" /> Red Flag Warning Signs
+              </h3>
+              <p className="text-xs text-red-800 mb-3">
+                Seek immediate medical care if you experience:
+              </p>
+              <div className="space-y-2.5">
+                {demoWarnings.map((w) => (
+                  <div key={w.id} className="p-3 bg-white rounded-xl border border-red-200 text-xs shadow-2xs">
+                    <div className="font-bold text-red-900">{w.symptom}</div>
+                    <div className="text-slate-700 mt-1 font-medium text-[11px]">{w.action}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-red-200 text-[11px] text-red-900 font-bold">
+              Emergency Services: Call 112 / 911 immediately
             </div>
           </div>
         </div>

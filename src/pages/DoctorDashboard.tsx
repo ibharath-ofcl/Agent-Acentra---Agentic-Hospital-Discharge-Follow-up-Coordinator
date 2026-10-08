@@ -210,50 +210,50 @@ export function DoctorDashboard() {
         </div>
 
         {/* SECTION 5: TOP STATISTICS (5 Required Cards) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4 mb-8 items-stretch">
           {/* 1. Total Patients */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-teal-800" /> Total Patients
             </div>
-            <div className="mt-2 text-2xl font-black text-slate-900">{demoDashboardStats.totalPatients}</div>
-            <div className="mt-0.5 text-[11px] text-slate-500">Active discharged cohort</div>
+            <div className="my-2 text-2xl font-black text-slate-900">{demoDashboardStats.totalPatients}</div>
+            <div className="text-[11px] text-slate-500">Active discharged cohort</div>
           </div>
 
           {/* 2. Pending Follow-ups */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Follow-ups
             </div>
-            <div className="mt-2 text-2xl font-black text-slate-900">{demoDashboardStats.pendingFollowUps}</div>
-            <div className="mt-0.5 text-[11px] text-amber-700 font-medium">Scheduled / In Progress</div>
+            <div className="my-2 text-2xl font-black text-slate-900">{demoDashboardStats.pendingFollowUps}</div>
+            <div className="text-[11px] text-amber-700 font-medium">Scheduled / In Progress</div>
           </div>
 
           {/* 3. High Priority */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <ClockAlert className="w-3.5 h-3.5 text-orange-600" /> High Priority
             </div>
-            <div className="mt-2 text-2xl font-black text-slate-900">2</div>
-            <div className="mt-0.5 text-[11px] text-orange-700 font-medium">Approaching deadline</div>
+            <div className="my-2 text-2xl font-black text-slate-900">2</div>
+            <div className="text-[11px] text-orange-700 font-medium">Approaching deadline</div>
           </div>
 
           {/* 4. Needs Review */}
-          <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-300 shadow-xs">
+          <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-300 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-700" /> Needs Review
             </div>
-            <div className="mt-2 text-2xl font-black text-amber-900">{reviewQueue.length}</div>
-            <div className="mt-0.5 text-[11px] text-amber-800 font-medium">Flagged for clinician check</div>
+            <div className="my-2 text-2xl font-black text-amber-900">{reviewQueue.length}</div>
+            <div className="text-[11px] text-amber-800 font-medium">Flagged for clinician check</div>
           </div>
 
           {/* 5. Overdue */}
-          <div className="bg-red-50/70 p-4 rounded-2xl border border-red-300 shadow-xs">
+          <div className="bg-red-50/70 p-4 rounded-2xl border border-red-300 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
               <ClockAlert className="w-3.5 h-3.5 text-red-600" /> Overdue
             </div>
-            <div className="mt-2 text-2xl font-black text-red-700">{demoOverdueItems.length}</div>
-            <div className="mt-0.5 text-[11px] text-red-700 font-medium">Deadline lapsed</div>
+            <div className="my-2 text-2xl font-black text-red-700">{demoOverdueItems.length}</div>
+            <div className="text-[11px] text-red-700 font-medium">Deadline lapsed</div>
           </div>
         </div>
 
@@ -277,7 +277,7 @@ export function DoctorDashboard() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 text-xs flex-wrap">
               <span className="text-slate-500 font-medium">Rank Criteria:</span>
               <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-700">🔴 Immediate Review</span>
               <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-700">🟠 High Priority</span>
@@ -286,9 +286,9 @@ export function DoctorDashboard() {
           </div>
 
           {/* Cards for each priority tier */}
-          <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
             {/* 🔴 IMMEDIATE REVIEW TIER */}
-            <div className="p-4 rounded-xl border border-red-200 bg-red-50/40 flex flex-col justify-between">
+            <div className="p-4 rounded-xl border border-red-200 bg-red-50/40 flex flex-col justify-between h-full">
               <div>
                 <div className="flex items-center justify-between">
                   <CareCoordinationPriorityBadge level="immediate-review" size="sm" />
@@ -312,7 +312,7 @@ export function DoctorDashboard() {
                   const item = priorityList.find((p) => p.id === 'CCP001');
                   if (item) handlePriorityAction(item);
                 }}
-                className="mt-4 w-full py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="mt-4 w-full py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 Review Now
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ export function DoctorDashboard() {
             </div>
 
             {/* 🟠 HIGH FOLLOW-UP PRIORITY TIER */}
-            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between">
+            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between h-full">
               <div>
                 <div className="flex items-center justify-between">
                   <CareCoordinationPriorityBadge level="high-priority" size="sm" />
@@ -344,7 +344,7 @@ export function DoctorDashboard() {
                   const item = priorityList.find((p) => p.id === 'CCP003');
                   if (item) handlePriorityAction(item);
                 }}
-                className="mt-4 w-full py-2 text-xs font-bold text-amber-950 bg-amber-200 hover:bg-amber-300 rounded-xl transition-colors border border-amber-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="mt-4 w-full py-2.5 text-xs font-bold text-amber-950 bg-amber-200 hover:bg-amber-300 rounded-xl transition-colors border border-amber-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 Review
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -352,7 +352,7 @@ export function DoctorDashboard() {
             </div>
 
             {/* 🟢 ROUTINE TIER */}
-            <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col justify-between">
+            <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col justify-between h-full">
               <div>
                 <div className="flex items-center justify-between">
                   <CareCoordinationPriorityBadge level="routine" size="sm" />
@@ -376,7 +376,7 @@ export function DoctorDashboard() {
                   const item = priorityList.find((p) => p.id === 'CCP005');
                   if (item) handlePriorityAction(item);
                 }}
-                className="mt-4 w-full py-2 text-xs font-bold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 rounded-xl transition-colors border border-emerald-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="mt-4 w-full py-2.5 text-xs font-bold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 rounded-xl transition-colors border border-emerald-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 View
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -435,13 +435,13 @@ export function DoctorDashboard() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => setSelectedReviewItem(item)}
-                    className="px-3 py-1.5 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-lg shadow-xs flex items-center gap-1 cursor-pointer"
+                    className="px-3.5 py-2 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-lg shadow-xs flex items-center gap-1 cursor-pointer"
                   >
                     Review
                   </button>
                   <button
                     onClick={() => handleResolveReviewItem(item.id, item.issue)}
-                    className="px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer"
+                    className="px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     <Check className="w-3.5 h-3.5" /> Approve
                   </button>
@@ -465,17 +465,17 @@ export function DoctorDashboard() {
               </p>
             </div>
 
-            {/* Search & Filters (Section 13) */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Search & Filters */}
+            <div className="flex flex-wrap items-center gap-2.5">
               {/* Search */}
               <div className="relative w-full sm:w-56">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Filter patient name..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#00e575] focus:ring-1 focus:ring-[#00e575]"
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#00e575] focus:ring-1 focus:ring-[#00e575]"
                 />
               </div>
 
@@ -484,7 +484,7 @@ export function DoctorDashboard() {
                 value={priorityFilter}
                 aria-label="Filter by priority"
                 onChange={(e) => setPriorityFilter(e.target.value as any)}
-                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 cursor-pointer focus:outline-none"
+                className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 cursor-pointer focus:outline-none"
               >
                 <option value="all">All Priorities</option>
                 <option value="immediate-review">🔴 Immediate Review</option>
@@ -497,7 +497,7 @@ export function DoctorDashboard() {
                 value={statusFilter}
                 aria-label="Filter by status"
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 cursor-pointer focus:outline-none"
+                className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 cursor-pointer focus:outline-none"
               >
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -524,40 +524,40 @@ export function DoctorDashboard() {
                 {filteredPriorityList.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                     {/* Patient */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 align-middle">
                       <div className="font-bold text-slate-900">{item.patientName}</div>
                       <div className="text-[10px] text-slate-500 font-mono">ID: {item.patientId}</div>
                     </td>
 
                     {/* Follow-up */}
-                    <td className="py-3.5 px-4 text-slate-700 font-medium">
-                      <div>{item.followUp}</div>
+                    <td className="py-3.5 px-4 align-middle text-slate-700 font-medium">
+                      <div className="font-semibold text-slate-900">{item.followUp}</div>
                       <div className="text-[10px] text-slate-500 truncate max-w-xs">{item.reason}</div>
                     </td>
 
                     {/* Due Date */}
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-teal-700" />
+                    <td className="py-3.5 px-4 align-middle text-slate-600 font-medium whitespace-nowrap">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-teal-700 shrink-0" />
                         {item.dueDate}
                       </span>
                     </td>
 
                     {/* Priority */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
                       <CareCoordinationPriorityBadge level={item.level} size="sm" />
                     </td>
 
                     {/* Status */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
                       <StatusBadge status={item.status} size="sm" />
                     </td>
 
                     {/* Action */}
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
                       <button
                         onClick={() => handlePriorityAction(item)}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                        className={`min-w-[110px] inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
                           item.level === 'immediate-review'
                             ? 'bg-red-600 hover:bg-red-700 text-white shadow-xs'
                             : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200'
@@ -576,103 +576,117 @@ export function DoctorDashboard() {
         {/* ========================================================
             SECTION 9 & 11: UPCOMING, OVERDUE & AI REMINDER ACTIVITY
             ======================================================== */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           {/* SECTION 9: OVERDUE FOLLOW-UPS */}
-          <div className="bg-red-50/60 rounded-2xl border border-red-200 p-6 shadow-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-red-200 mb-4">
-              <h3 className="text-xs font-extrabold text-red-950 uppercase tracking-wider flex items-center gap-1.5">
-                <ClockAlert className="w-4 h-4 text-red-600" /> OVERDUE FOLLOW-UPS
-              </h3>
-              <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full border border-red-300">
-                Lapsed Deadline
-              </span>
+          <div className="bg-red-50/60 rounded-2xl border border-red-200 p-6 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-red-200 mb-4">
+                <h3 className="text-xs font-extrabold text-red-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <ClockAlert className="w-4 h-4 text-red-600" /> OVERDUE FOLLOW-UPS
+                </h3>
+                <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full border border-red-300">
+                  Lapsed Deadline
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {demoOverdueItems.map((od) => (
+                  <div key={od.id} className="p-4 bg-white rounded-xl border border-red-200 text-xs shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-red-900 text-sm">{od.patientName}</span>
+                      <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                        {od.daysOverdue} day overdue
+                      </span>
+                    </div>
+                    <div className="mt-1 text-slate-800 font-semibold">{od.taskTitle}</div>
+                    <div className="text-slate-600 mt-0.5">Due: <strong className="text-red-700">{od.dueDate}</strong></div>
+                    <div className="text-[11px] text-slate-500 mt-1">Attending: {od.attending} • {od.contactPhone}</div>
+
+                    <button
+                      onClick={() => {
+                        setToastMessage(`Coordinator task opened for ${od.patientName}`);
+                        setTimeout(() => setToastMessage(null), 3000);
+                      }}
+                      className="mt-3 w-full py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs cursor-pointer"
+                    >
+                      Initiate Care Outreach
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {demoOverdueItems.map((od) => (
-                <div key={od.id} className="p-4 bg-white rounded-xl border border-red-200 text-xs shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-red-900 text-sm">{od.patientName}</span>
-                    <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
-                      {od.daysOverdue} day overdue
-                    </span>
-                  </div>
-                  <div className="mt-1 text-slate-800 font-semibold">{od.taskTitle}</div>
-                  <div className="text-slate-600 mt-0.5">Due: <strong className="text-red-700">{od.dueDate}</strong></div>
-                  <div className="text-[11px] text-slate-500 mt-1">Attending: {od.attending} • {od.contactPhone}</div>
-
-                  <button
-                    onClick={() => {
-                      setToastMessage(`Coordinator task opened for ${od.patientName}`);
-                      setTimeout(() => setToastMessage(null), 3000);
-                    }}
-                    className="mt-3 w-full py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs cursor-pointer"
-                  >
-                    Initiate Care Outreach
-                  </button>
-                </div>
-              ))}
+            <div className="mt-4 pt-3 border-t border-red-200 text-[11px] text-red-800">
+              Immediate coordination required for high-risk patients
             </div>
           </div>
 
           {/* SECTION 9: UPCOMING DEADLINES */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-3 border-b border-slate-100 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-teal-800" /> Upcoming Deadlines
-            </h3>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-3 border-b border-slate-100 flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-teal-800" /> Upcoming Deadlines
+              </h3>
 
-            <div className="space-y-3">
-              {demoUpcomingDeadlines.map((ud) => (
-                <div key={ud.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">{ud.patientName}</span>
-                    <span className="text-[11px] text-slate-600 font-mono">{ud.dueDate}</span>
+              <div className="space-y-3">
+                {demoUpcomingDeadlines.map((ud) => (
+                  <div key={ud.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">{ud.patientName}</span>
+                      <span className="text-[11px] text-slate-600 font-mono">{ud.dueDate}</span>
+                    </div>
+                    <div className="text-slate-700 font-medium mt-0.5">{ud.taskTitle}</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">Specialty: {ud.specialty}</div>
                   </div>
-                  <div className="text-slate-700 font-medium mt-0.5">{ud.taskTitle}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Specialty: {ud.specialty}</div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+              Timeline monitored continuously against hospital protocol
             </div>
           </div>
 
           {/* SECTION 11: AI REMINDER ACTIVITY PANEL */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <PhoneCall className="w-4 h-4 text-teal-800" /> AI Reminder Simulation
-              </h3>
-              <span className="text-[10px] text-teal-800 bg-teal-50 px-2 py-0.5 rounded font-semibold border border-teal-200">
-                Informational
-              </span>
-            </div>
-
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-              <div className="flex items-center justify-between font-bold text-slate-900">
-                <span>{demoReminderSimulation.patientName}</span>
-                <span className="text-[10px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                  {demoReminderSimulation.currentStatus}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <PhoneCall className="w-4 h-4 text-teal-800" /> AI Reminder Simulation
+                </h3>
+                <span className="text-[10px] text-teal-800 bg-teal-50 px-2 py-0.5 rounded font-semibold border border-teal-200">
+                  Informational
                 </span>
               </div>
-              <p className="text-[11px] text-slate-600 mt-1">
-                <strong>Scheduled:</strong> {demoReminderSimulation.scheduledTime}
-              </p>
-              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                <strong>Purpose:</strong> {demoReminderSimulation.purpose}
-              </p>
 
-              {/* Simulation Sequence */}
-              <div className="mt-3 pt-2 border-t border-slate-200 space-y-1 text-[11px] text-slate-600 font-mono">
-                <div className="flex items-center justify-between p-1 bg-white rounded border border-slate-200">
-                  <span>Attempt 1 — No answer</span>
-                  <span className="text-amber-600 font-bold">Recorded</span>
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                <div className="flex items-center justify-between font-bold text-slate-900">
+                  <span>{demoReminderSimulation.patientName}</span>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                    {demoReminderSimulation.currentStatus}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between p-1 bg-white rounded border border-slate-200">
-                  <span>Attempt 2 — Scheduled</span>
-                  <span className="text-teal-700 font-bold">In 30m</span>
-                </div>
-                <div className="flex items-center justify-between p-1 bg-white rounded border border-slate-200">
-                  <span>SMS fallback — Pending</span>
-                  <span className="text-slate-400">Queued</span>
+                <p className="text-[11px] text-slate-600 mt-1">
+                  <strong>Scheduled:</strong> {demoReminderSimulation.scheduledTime}
+                </p>
+                <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                  <strong>Purpose:</strong> {demoReminderSimulation.purpose}
+                </p>
+
+                {/* Simulation Sequence */}
+                <div className="mt-3 pt-2 border-t border-slate-200 space-y-1 text-[11px] text-slate-600 font-mono">
+                  <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+                    <span>Attempt 1 — No answer</span>
+                    <span className="text-amber-600 font-bold">Recorded</span>
+                  </div>
+                  <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+                    <span>Attempt 2 — Scheduled</span>
+                    <span className="text-teal-700 font-bold">In 30m</span>
+                  </div>
+                  <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+                    <span>SMS fallback — Pending</span>
+                    <span className="text-slate-400">Queued</span>
+                  </div>
                 </div>
               </div>
             </div>

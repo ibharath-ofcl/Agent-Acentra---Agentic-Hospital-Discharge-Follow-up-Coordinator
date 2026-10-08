@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { Phone, MessageSquare, RotateCcw, AlertCircle, ShieldAlert } from 'lucide-react';
 
 export function ReminderSection() {
@@ -7,16 +6,10 @@ export function ReminderSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
           {/* Visual simulation card */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.5 }}
-            className="order-2 lg:order-1"
-          >
+          <div className="order-2 lg:order-1 mt-10 lg:mt-0">
             <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
               {/* Example Call Script Box */}
-              <div className="bg-[#052429] text-white rounded-xl p-5 border border-[#0e4851] mb-6">
+              <div className="bg-[#052429] text-white rounded-xl p-5 border border-[#0e4851] mb-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-2.5">
                   <Phone className="w-4 h-4 text-[#00e575]" />
                   <span className="text-[11px] font-black text-[#00e575] uppercase tracking-wider">
@@ -34,37 +27,27 @@ export function ReminderSection() {
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
                 Automated Multi-Channel Fallback Flow (If Unanswered):
               </p>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {[
                   { icon: Phone, label: '1. AI reminder phone call placed', color: 'text-teal-800' },
                   { icon: RotateCcw, label: '2. Retry attempt scheduled in 30 minutes', color: 'text-amber-600' },
                   { icon: MessageSquare, label: '3. If still unanswered: send secure SMS link', color: 'text-emerald-700' },
                   { icon: AlertCircle, label: '4. Record attempts & escalate to care team if required', color: 'text-rose-700' },
-                ].map((item, i) => (
-                  <motion.div
+                ].map((item) => (
+                  <div
                     key={item.label}
-                    initial={{ opacity: 0, x: 10 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.25, delay: 0.2 + i * 0.06 }}
-                    className="flex items-center gap-3 py-2 px-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium"
+                    className="flex items-center gap-3 py-2.5 px-3.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium"
                   >
                     <item.icon className={`w-4 h-4 ${item.color} shrink-0`} />
                     <span>{item.label}</span>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Text Content */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="order-1 lg:order-2 mb-10 lg:mb-0"
-          >
+          <div className="order-1 lg:order-2">
             <p className="text-xs font-bold text-teal-800 uppercase tracking-widest mb-3">
               Multi-Channel Reminder Engine
             </p>
@@ -89,7 +72,7 @@ export function ReminderSection() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

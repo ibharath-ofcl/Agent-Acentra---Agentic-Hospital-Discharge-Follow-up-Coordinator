@@ -22,11 +22,8 @@ export function Navbar() {
   }, []);
 
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
         scrolled
           ? 'bg-[#052429]/95 backdrop-blur-md border-b border-[#0e4851] shadow-lg'
           : 'bg-[#052429] border-b border-[#0a383f]'
@@ -44,12 +41,12 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Links */}
-        <div className="hidden lg:flex items-center gap-1">
+        <div className="hidden lg:flex items-center gap-2">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
-              className="px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-[#0a383f]/60"
+              className="px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-[#0a383f]/60"
             >
               {link.label}
             </a>
@@ -114,6 +111,6 @@ export function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.header>
+    </header>
   );
 }
