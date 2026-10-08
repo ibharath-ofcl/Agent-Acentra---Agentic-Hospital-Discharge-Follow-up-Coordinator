@@ -78,7 +78,7 @@ export function PatientExperienceSection() {
             <div className="mb-4 p-4 rounded-xl bg-teal-50/70 border border-teal-200 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center text-teal-900 font-bold">
-                  <Heart className="w-4 h-4 text-rose-600" />
+                  <Heart className="w-4 h-4 text-red-600" />
                 </div>
                 <div>
                   <div className="font-bold text-slate-900">Next Priority Action: Fasting Blood Sugar & HbA1c</div>

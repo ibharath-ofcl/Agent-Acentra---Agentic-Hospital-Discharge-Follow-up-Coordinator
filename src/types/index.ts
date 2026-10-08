@@ -3,7 +3,7 @@
 // Phase 1: Frontend Foundation
 // ============================================================
 
-export type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'overdue' | 'needs-review' | 'cancelled';
+export type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'overdue' | 'needs-review' | 'cancelled' | 'at-risk';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type UserRole = 'patient' | 'doctor' | 'coordinator';
 export type EscalationLevel = 'low' | 'medium' | 'high' | 'critical';
@@ -70,6 +70,7 @@ export interface FollowUpTask {
   completedDate?: string;
   assignedTo?: string;
   sourceEvidence?: SourceEvidence;
+  dependencyLinks?: { type: 'required-before' | 'depends-on'; targetTaskId: string; }[];
   notes?: string;
   createdAt: string;
   updatedAt: string;

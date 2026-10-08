@@ -25,7 +25,7 @@ export function DoctorExperienceSection() {
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
           {/* Visual Showcase */}
           <div className="order-2 lg:order-1 mt-10 lg:mt-0">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#008742] animate-pulse-soft" />

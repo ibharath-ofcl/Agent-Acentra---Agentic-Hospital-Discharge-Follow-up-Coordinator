@@ -90,7 +90,7 @@ export function HowItWorksSection() {
           {steps.map((step, i) => (
             <div
               key={step.title}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between"
+              className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between"
             >
               <div>
                 {/* Header with Step Number and Badge */}
@@ -132,7 +132,7 @@ export function HowItWorksSection() {
         </div>
 
         {/* Bottom Clinical Assurance Callout */}
-        <div className="mt-12 bg-white rounded-2xl border border-teal-200 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-12 bg-white rounded-xl border border-teal-200 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 flex items-center justify-center shrink-0">
               <FileCheck2 className="w-5 h-5" />

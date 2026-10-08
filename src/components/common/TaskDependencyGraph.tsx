@@ -76,7 +76,7 @@ export function TaskDependencyGraph({ primaryTask, dependentTasks, allTasks }: T
       <div className="relative flex flex-col items-center">
         {/* If this task has dependencies (it is the child) */}
         {primaryTask.dependencyLinks?.map((dep, idx) => {
-          const parentTask = allTasks.find(t => t.id === dep.dependsOnTaskId);
+          const parentTask = allTasks.find(t => t.id === dep.targetTaskId);
           if (!parentTask) return null;
 
           return (

@@ -34,12 +34,12 @@ export function AIReminderSimulationView() {
 
   const getStatusDisplay = () => {
     switch (simState) {
-      case 'scheduled': return { label: 'Scheduled', color: 'text-indigo-700 bg-indigo-50 border-indigo-200', icon: CalendarClock };
+      case 'scheduled': return { label: 'Scheduled', color: 'text-teal-700 bg-teal-50 border-teal-200', icon: CalendarClock };
       case 'calling': return { label: 'Calling...', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: PhoneCall };
       case 'answered': return { label: 'Answered', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', icon: CheckCircle2 };
       case 'no-answer': return { label: 'No Answer', color: 'text-red-700 bg-red-50 border-red-200', icon: PhoneOff };
-      case 'retry-scheduled': return { label: 'Retry Scheduled', color: 'text-orange-700 bg-orange-50 border-orange-200', icon: PhoneForwarded };
-      case 'escalated': return { label: 'Escalated', color: 'text-rose-700 bg-rose-50 border-rose-200', icon: AlertTriangle };
+      case 'retry-scheduled': return { label: 'Retry Scheduled', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: PhoneForwarded };
+      case 'escalated': return { label: 'Escalated', color: 'text-red-700 bg-red-50 border-red-200', icon: AlertTriangle };
       default: return { label: 'Scheduled', color: 'text-slate-700 bg-slate-50 border-slate-200', icon: CalendarClock };
     }
   };
@@ -50,7 +50,7 @@ export function AIReminderSimulationView() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200">
+      <div className="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -101,7 +101,7 @@ export function AIReminderSimulationView() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         {/* Left Column: AI Transcript & Status */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200 relative overflow-hidden">
+          <div className="bg-white p-6 rounded-xl shadow-xs border border-slate-200 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-teal-500"></div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-900">Current Status</h3>
@@ -145,7 +145,7 @@ export function AIReminderSimulationView() {
         </div>
 
         {/* Right Column: Timeline Representation */}
-        <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200">
+        <div className="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
           <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
             <CalendarClock className="w-5 h-5 text-slate-400" /> Outreach Timeline
           </h3>
@@ -184,7 +184,7 @@ export function AIReminderSimulationView() {
                   ) : simState === 'calling' ? (
                     <><PhoneCall className="w-3.5 h-3.5 text-amber-500" /> Calling...</>
                   ) : simState === 'retry-scheduled' ? (
-                    <><Clock className="w-3.5 h-3.5 text-indigo-500" /> Scheduled</>
+                    <><Clock className="w-3.5 h-3.5 text-teal-500" /> Scheduled</>
                   ) : (
                     <><CalendarClock className="w-3.5 h-3.5" /> Pending...</>
                   )}

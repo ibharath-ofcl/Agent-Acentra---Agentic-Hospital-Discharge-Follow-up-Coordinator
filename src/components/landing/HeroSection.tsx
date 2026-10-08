@@ -68,12 +68,6 @@ const workflowSteps = [
 export function HeroSection() {
   return (
     <section className="relative pt-32 sm:pt-36 lg:pt-40 pb-16 lg:pb-24 bg-[#052429] text-white overflow-hidden border-b border-[#0a383f]">
-      {/* Background glow accents */}
-      <div className="absolute inset-0 pointer-events-none opacity-30">
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-[#0e4851]/50 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-10 w-[400px] h-[400px] bg-[#00e575]/10 rounded-full blur-3xl" />
-      </div>
-
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero Header & Mission */}
         <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
@@ -125,7 +119,7 @@ export function HeroSection() {
 
         {/* STRONG VISUAL WORKFLOW: 7-Step Discharge-to-Resolution Pipeline */}
         <div className="mt-16 lg:mt-20 max-w-6xl mx-auto">
-          <div className="bg-[#072d33] rounded-2xl border border-[#0e4851] p-6 sm:p-8 shadow-2xl">
+          <div className="bg-[#072d33] rounded-xl border border-[#0e4851] p-6 sm:p-8 shadow-2xl">
             {/* Visual Workflow Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[#0e4851]/80 gap-3 mb-6">
               <div>

@@ -36,8 +36,8 @@
   --color-urgent-red-border: #fecaca;
 
   --color-priority-orange: #f97316;
-  --color-priority-orange-bg: #fff7ed;
-  --color-priority-orange-border: #fed7aa;
+  --color-priority-amber-bg: #fff7ed;
+  --color-priority-amber-border: #fed7aa;
 
   --color-routine-green: #10b981;
   --color-routine-green-bg: #ecfdf5;
@@ -108,4 +108,15 @@ body {
 
 .animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }

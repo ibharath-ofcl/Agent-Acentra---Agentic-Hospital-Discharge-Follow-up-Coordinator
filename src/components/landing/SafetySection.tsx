@@ -41,7 +41,7 @@ export function SafetySection() {
         </div>
 
         {/* CLINICAL BOUNDARY MATRIX: What AI Does vs What Clinicians Decide */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs mb-12">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-xs mb-12">
           <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-teal-800" />
             Clinical Boundary Matrix: System Capabilities vs Medical Authority
@@ -114,7 +114,7 @@ export function SafetySection() {
         <div className="lg:grid lg:grid-cols-5 lg:gap-8 items-stretch">
           {/* Triggers (3 cols) */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs h-full flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-xs h-full flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-5">
                   5 Automated Escalation Triggers:
@@ -146,7 +146,7 @@ export function SafetySection() {
 
           {/* Escalation Path (2 cols) */}
           <div className="lg:col-span-2 mt-6 lg:mt-0">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs h-full flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-xs h-full flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-5">
                   Escalation Resolution Path:

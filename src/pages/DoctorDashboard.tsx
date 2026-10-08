@@ -17,6 +17,7 @@ import {
   Calendar,
   ArrowRight,
   Clock,
+  UserCheck,
 } from 'lucide-react';
 import {
   demoPatients,
@@ -189,6 +190,32 @@ export function DoctorDashboard() {
         </div>
       </header>
 
+      {/* Mobile Navigation (Scrollable) */}
+      <div className="lg:hidden bg-[#052429] border-b border-[#0e4851] overflow-x-auto hide-scrollbar sticky top-16 z-30">
+        <div className="flex items-center px-4 py-2 gap-2 w-max">
+          {[
+            { id: 'dashboard', label: 'Dashboard' },
+            { id: 'patients', label: 'Patients' },
+            { id: 'priority', label: 'Priority Queue' },
+            { id: 'review', label: 'Needs Review' },
+            { id: 'escalations', label: 'Overdue & Deadlines' },
+            { id: 'activity', label: 'Activity' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveNav(tab.id as any)}
+              className={`px-3 py-1.5 text-xs rounded-full font-semibold transition-colors ${
+                activeNav === tab.id
+                  ? 'bg-[#00e575] text-[#052429]'
+                  : 'text-slate-300 bg-[#0a383f] border border-[#0e4851]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Main Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {/* Top Header & Core Question (Section 5) */}
@@ -212,7 +239,7 @@ export function DoctorDashboard() {
         {/* SECTION 5: TOP STATISTICS (5 Required Cards) */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4 mb-8 items-stretch">
           {/* 1. Total Patients */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-teal-800" /> Total Patients
             </div>
@@ -221,7 +248,7 @@ export function DoctorDashboard() {
           </div>
 
           {/* 2. Pending Follow-ups */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Follow-ups
             </div>
@@ -230,16 +257,16 @@ export function DoctorDashboard() {
           </div>
 
           {/* 3. High Priority */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <ClockAlert className="w-3.5 h-3.5 text-orange-600" /> High Priority
+              <ClockAlert className="w-3.5 h-3.5 text-amber-600" /> High Priority
             </div>
             <div className="my-2 text-2xl font-black text-slate-900">2</div>
-            <div className="text-[11px] text-orange-700 font-medium">Approaching deadline</div>
+            <div className="text-[11px] text-amber-700 font-medium">Approaching deadline</div>
           </div>
 
           {/* 4. Needs Review */}
-          <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-300 shadow-xs h-full flex flex-col justify-between">
+          <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-300 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-700" /> Needs Review
             </div>
@@ -248,7 +275,7 @@ export function DoctorDashboard() {
           </div>
 
           {/* 5. Overdue */}
-          <div className="bg-red-50/70 p-4 rounded-2xl border border-red-300 shadow-xs h-full flex flex-col justify-between">
+          <div className="bg-red-50/70 p-4 rounded-xl border border-red-300 shadow-xs h-full flex flex-col justify-between">
             <div className="text-xs font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
               <ClockAlert className="w-3.5 h-3.5 text-red-600" /> Overdue
             </div>
@@ -260,7 +287,8 @@ export function DoctorDashboard() {
         {/* ========================================================
             SECTION 6: CARE COORDINATION PRIORITY (PROMINENT FEATURE)
             ======================================================== */}
-        <div className="bg-white rounded-2xl border-2 border-teal-900/20 p-6 sm:p-7 shadow-sm mb-8">
+        {(activeNav === 'dashboard' || activeNav === 'priority') && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-7 shadow-xs mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
               <div className="flex items-center gap-2">
@@ -384,11 +412,13 @@ export function DoctorDashboard() {
             </div>
           </div>
         </div>
+        )}
 
         {/* ========================================================
             SECTION 8: NEEDS HUMAN REVIEW QUEUE
             ======================================================== */}
-        <div className="bg-white rounded-2xl border border-amber-300 shadow-xs p-6 mb-8">
+        {(activeNav === 'dashboard' || activeNav === 'review') && (
+          <div className="bg-white rounded-xl border border-amber-300 shadow-xs p-6 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-100 mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
@@ -450,11 +480,13 @@ export function DoctorDashboard() {
             ))}
           </div>
         </div>
+        )}
 
         {/* ========================================================
             SECTION 7: DOCTOR PATIENT QUEUE TABLE
             ======================================================== */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 mb-8">
+        {(activeNav === 'dashboard' || activeNav === 'patients') && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -521,64 +553,78 @@ export function DoctorDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredPriorityList.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                    {/* Patient */}
-                    <td className="py-3.5 px-4 align-middle">
-                      <div className="font-bold text-slate-900">{item.patientName}</div>
-                      <div className="text-[10px] text-slate-500 font-mono">ID: {item.patientId}</div>
-                    </td>
-
-                    {/* Follow-up */}
-                    <td className="py-3.5 px-4 align-middle text-slate-700 font-medium">
-                      <div className="font-semibold text-slate-900">{item.followUp}</div>
-                      <div className="text-[10px] text-slate-500 truncate max-w-xs">{item.reason}</div>
-                    </td>
-
-                    {/* Due Date */}
-                    <td className="py-3.5 px-4 align-middle text-slate-600 font-medium whitespace-nowrap">
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-teal-700 shrink-0" />
-                        {item.dueDate}
-                      </span>
-                    </td>
-
-                    {/* Priority */}
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <CareCoordinationPriorityBadge level={item.level} size="sm" />
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <StatusBadge status={item.status} size="sm" />
-                    </td>
-
-                    {/* Action */}
-                    <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
-                      <button
-                        onClick={() => handlePriorityAction(item)}
-                        className={`min-w-[110px] inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
-                          item.level === 'immediate-review'
-                            ? 'bg-red-600 hover:bg-red-700 text-white shadow-xs'
-                            : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200'
-                        }`}
-                      >
-                        {item.actionLabel}
-                      </button>
+                {filteredPriorityList.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 px-4 text-center">
+                      <div className="flex flex-col items-center justify-center text-slate-500">
+                        <UserCheck className="w-8 h-8 text-slate-300 mb-3" />
+                        <p className="text-sm font-medium text-slate-900">No patients found</p>
+                        <p className="text-xs mt-1 text-slate-500">Try adjusting your filters or search query.</p>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredPriorityList.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      {/* Patient */}
+                      <td className="py-3.5 px-4 align-middle">
+                        <div className="font-bold text-slate-900">{item.patientName}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">ID: {item.patientId}</div>
+                      </td>
+
+                      {/* Follow-up */}
+                      <td className="py-3.5 px-4 align-middle text-slate-700 font-medium">
+                        <div className="font-semibold text-slate-900">{item.followUp}</div>
+                        <div className="text-[10px] text-slate-500 truncate max-w-xs">{item.reason}</div>
+                      </td>
+
+                      {/* Due Date */}
+                      <td className="py-3.5 px-4 align-middle text-slate-600 font-medium whitespace-nowrap">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+                          {item.dueDate}
+                        </span>
+                      </td>
+
+                      {/* Priority */}
+                      <td className="py-3.5 px-4 align-middle whitespace-nowrap">
+                        <CareCoordinationPriorityBadge level={item.level} size="sm" />
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4 align-middle whitespace-nowrap">
+                        <StatusBadge status={item.status} size="sm" />
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
+                        <button
+                          onClick={() => handlePriorityAction(item)}
+                          className={`min-w-[110px] inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
+                            item.level === 'immediate-review'
+                              ? 'bg-red-600 hover:bg-red-700 text-white shadow-xs'
+                              : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200'
+                          }`}
+                        >
+                          {item.actionLabel}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
+        )}
 
         {/* ========================================================
             SECTION 9 & 11: UPCOMING, OVERDUE & AI REMINDER ACTIVITY
             ======================================================== */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        {(activeNav === 'dashboard' || activeNav === 'escalations' || activeNav === 'activity') && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           {/* SECTION 9: OVERDUE FOLLOW-UPS */}
-          <div className="bg-red-50/60 rounded-2xl border border-red-200 p-6 shadow-xs h-full flex flex-col justify-between">
+          <div className="bg-red-50/60 rounded-xl border border-red-200 p-6 shadow-xs h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-red-200 mb-4">
                 <h3 className="text-xs font-extrabold text-red-950 uppercase tracking-wider flex items-center gap-1.5">
@@ -622,7 +668,7 @@ export function DoctorDashboard() {
           </div>
 
           {/* SECTION 9: UPCOMING DEADLINES */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
             <div>
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-3 border-b border-slate-100 flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-teal-800" /> Upcoming Deadlines
@@ -648,7 +694,7 @@ export function DoctorDashboard() {
           </div>
 
           {/* SECTION 11: AI REMINDER ACTIVITY PANEL */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
@@ -697,6 +743,7 @@ export function DoctorDashboard() {
             </div>
           </div>
         </div>
+        )}
       </main>
 
       {/* Review Modal (for resolving Needs Human Review queue items) */}
@@ -707,7 +754,7 @@ export function DoctorDashboard() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative"
+              className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative"
             >
               <button
                 onClick={() => setSelectedReviewItem(null)}
@@ -771,7 +818,7 @@ export function DoctorDashboard() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative"
+              className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative"
             >
               <button
                 onClick={() => setInspectedPatient(null)}

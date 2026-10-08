@@ -42,7 +42,7 @@ const capabilities = [
     description:
       'Purpose-built specifically for post-discharge recovery. Understands inpatient-to-outpatient transitions, clinical urgency levels, and hospital care team hierarchies.',
     tag: 'Clinical Alignment',
-    color: 'text-rose-900 bg-rose-50 border-rose-200',
+    color: 'text-red-900 bg-red-50 border-red-200',
   },
   {
     icon: Languages,
@@ -94,7 +94,7 @@ export function CapabilitiesSection() {
             <motion.div
               key={cap.title}
               whileHover={{ y: -3 }}
-              className={`p-6 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all flex flex-col justify-between group shadow-xs hover:shadow-md ${
+              className={`p-6 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all flex flex-col justify-between group shadow-xs hover:shadow-md ${
                 i === 6 ? 'md:col-span-2 lg:col-span-1' : ''
               }`}
             >
@@ -124,7 +124,7 @@ export function CapabilitiesSection() {
           ))}
 
           {/* 8th Balancing Summary Card: Hospital Trust Standard */}
-          <div className="p-6 rounded-2xl border border-teal-200 bg-teal-50/40 flex flex-col justify-between">
+          <div className="p-6 rounded-xl border border-teal-200 bg-teal-50/40 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-teal-300 bg-teal-100 text-teal-900 shadow-xs">

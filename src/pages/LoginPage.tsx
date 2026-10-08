@@ -83,11 +83,6 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#03181b] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background ambient teal */}
-      <div className="absolute inset-0 pointer-events-none opacity-30">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-[#0e4851] rounded-full blur-3xl" />
-      </div>
-
       <div className="w-full max-w-md relative z-10 flex flex-col items-center">
         <Link
           to="/"
@@ -125,7 +120,7 @@ export function LoginPage() {
       </div>
 
       <div className="mt-6 w-full max-w-md relative z-10">
-        <div className="bg-[#052429] border border-[#0e4851] py-8 px-6 shadow-2xl rounded-2xl sm:px-10">
+        <div className="bg-[#052429] border border-[#0e4851] py-8 px-6 shadow-2xl rounded-xl sm:px-10">
           {/* Role selection tabs */}
           <div className="mb-6">
             <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2.5">

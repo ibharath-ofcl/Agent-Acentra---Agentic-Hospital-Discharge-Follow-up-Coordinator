@@ -86,12 +86,12 @@ export function DocumentIntelligenceView() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200">
+      <div className="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-xl font-bold text-slate-900">Document Intelligence</h2>
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md flex items-center gap-1">
+              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 rounded-md flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3" /> Synthetic Demo Data
               </span>
             </div>
@@ -119,7 +119,7 @@ export function DocumentIntelligenceView() {
         {/* Extraction Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center gap-4">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-700">
+            <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center text-teal-700">
               <FileText className="w-5 h-5" />
             </div>
             <div>
@@ -231,8 +231,8 @@ export function DocumentIntelligenceView() {
                   <p>Patient was admitted on 10/01/2026 for scheduled procedure. Post-operative course was unremarkable.</p>
                   <p>Vitals remained stable throughout the stay. Pain managed with oral analgesics.</p>
                 </div>
-                <div className="my-3 p-2 bg-yellow-100/60 border-2 border-yellow-300 rounded text-sm text-slate-900 font-medium shadow-inner relative">
-                  <span className="absolute -top-2.5 -right-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white shadow-xs">
+                <div className="my-3 p-2.5 bg-amber-50/80 border border-amber-200 rounded-lg text-sm text-amber-900 font-medium shadow-xs relative">
+                  <span className="absolute -top-2.5 -right-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[10px] font-bold text-white shadow-xs">
                     AI
                   </span>
                   {selectedItem.sourceText}

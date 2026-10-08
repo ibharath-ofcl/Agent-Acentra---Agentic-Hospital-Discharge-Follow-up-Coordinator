@@ -7,7 +7,7 @@ export function ReminderSection() {
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
           {/* Visual simulation card */}
           <div className="order-2 lg:order-1 mt-10 lg:mt-0">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+            <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-xs">
               {/* Example Call Script Box */}
               <div className="bg-[#052429] text-white rounded-xl p-5 border border-[#0e4851] mb-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-2.5">
@@ -32,7 +32,7 @@ export function ReminderSection() {
                   { icon: Phone, label: '1. AI reminder phone call placed', color: 'text-teal-800' },
                   { icon: RotateCcw, label: '2. Retry attempt scheduled in 30 minutes', color: 'text-amber-600' },
                   { icon: MessageSquare, label: '3. If still unanswered: send secure SMS link', color: 'text-emerald-700' },
-                  { icon: AlertCircle, label: '4. Record attempts & escalate to care team if required', color: 'text-rose-700' },
+                  { icon: AlertCircle, label: '4. Record attempts & escalate to care team if required', color: 'text-red-700' },
                 ].map((item) => (
                   <div
                     key={item.label}

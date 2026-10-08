@@ -32,44 +32,44 @@ export function ClosedLoopSection() {
         {/* Comparison Grid: Traditional vs CareFlow AI */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch mb-14">
           {/* Traditional Fragmented Care (4 cols) */}
-          <div className="lg:col-span-5 bg-rose-50/40 rounded-2xl border border-rose-200 p-6 sm:p-7 flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-red-50/40 rounded-xl border border-red-200 p-6 sm:p-7 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between pb-3 border-b border-rose-200 mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-rose-900">
+              <div className="flex items-center justify-between pb-3 border-b border-red-200 mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-red-900">
                   Traditional Discharge Process
                 </span>
-                <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-300">
+                <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded border border-red-300">
                   Fragmented & High-Risk
                 </span>
               </div>
 
-              <div className="space-y-3.5 text-xs text-rose-950">
+              <div className="space-y-3.5 text-xs text-red-950">
                 <div className="flex items-start gap-2.5">
-                  <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <XCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <span><strong>Static Paper Handout:</strong> Patient receives a multi-page summary with dense medical jargon.</span>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <XCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <span><strong>Zero Outpatient Visibility:</strong> Hospital care team has no way of knowing if follow-ups were booked.</span>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <XCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <span><strong>Silent Ambiguity:</strong> Missing specialist dates are overlooked until a post-discharge complication occurs.</span>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <XCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <span><strong>High 30-Day Readmissions:</strong> Patients miss crucial cardiology, nephrology, or blood sugar checkpoints.</span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-rose-200 text-[11px] text-rose-800 font-semibold">
+            <div className="mt-6 pt-4 border-t border-red-200 text-[11px] text-red-800 font-semibold">
               Result: Up to 20% preventable readmissions within 30 days.
             </div>
           </div>
 
           {/* CareFlow AI Closed-Loop Lifecycle (7 cols) */}
-          <div className="lg:col-span-7 bg-[#052429] text-white rounded-2xl border border-[#0e4851] p-6 sm:p-7 shadow-xl flex flex-col justify-between">
+          <div className="lg:col-span-7 bg-[#052429] text-white rounded-xl border border-[#0e4851] p-6 sm:p-7 shadow-xl flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-[#0e4851] mb-5">
                 <div className="flex items-center gap-2">

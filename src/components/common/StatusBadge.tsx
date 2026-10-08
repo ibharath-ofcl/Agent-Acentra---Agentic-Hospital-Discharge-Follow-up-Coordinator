@@ -12,6 +12,7 @@ const statusConfig: Record<TaskStatus, { label: string; className: string; dotCo
   overdue: { label: 'Overdue', className: 'bg-red-50 text-red-800 border-red-200', dotColor: 'bg-red-500' },
   'needs-review': { label: 'Needs Review', className: 'bg-amber-50 text-amber-800 border-amber-300 font-semibold', dotColor: 'bg-amber-500' },
   cancelled: { label: 'Cancelled', className: 'bg-slate-100 text-slate-600 border-slate-200', dotColor: 'bg-slate-400' },
+  'at-risk': { label: 'At Risk', className: 'bg-red-100 text-red-900 border-red-300 font-bold', dotColor: 'bg-red-600' },
 };
 
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
@@ -53,7 +54,7 @@ interface EscalationBadgeProps {
 const escalationConfig: Record<EscalationLevel, { label: string; className: string }> = {
   low: { label: 'Low', className: 'bg-slate-100 text-slate-700 border-slate-200' },
   medium: { label: 'Medium', className: 'bg-amber-50 text-amber-800 border-amber-200' },
-  high: { label: 'High', className: 'bg-orange-50 text-orange-800 border-orange-200' },
+  high: { label: 'High', className: 'bg-amber-50 text-amber-800 border-amber-200' },
   critical: { label: 'Critical', className: 'bg-red-50 text-red-800 border-red-200' },
 };
 
