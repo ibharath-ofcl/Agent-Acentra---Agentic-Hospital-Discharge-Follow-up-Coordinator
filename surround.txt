@@ -1,0 +1,33 @@
+import { useState, useEffect } from 'react';
+import { api } from '../api';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Activity, Users, ClockAlert, AlertTriangle, CheckCircle2, Search, Check, LogOut, ShieldCheck, User, PhoneCall, X, Calendar, ArrowRight, Clock, UserCheck, Menu, UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History, BellRing, HelpCircle } from 'lucide-react';
+import {
+  StatusBadge,
+  CareCoordinationPriorityBadge,
+} from '../components/common/StatusBadge';
+import { useAuth } from '../hooks/useAuth';
+import type {
+  CareCoordinationPriorityItem,
+  NeedsReviewItem,
+  Patient,
+  CareCoordinationPriorityLevel,
+} from '../types';
+
+export function DoctorDashboard() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  // Navigation tab state
+  const [activeNav, setActiveNav] = useState('dashboard');
+
+  const sidebarNav = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'patients', label: 'Patients', icon: Users },
+    { id: 'upload', label: 'Document Upload', icon: UploadCloud },
+    { id: 'followup', label: 'Follow-up Tasks', icon: ListTodo },
+    { id: 'review', label: 'Needs Human Review', icon: AlertTriangle },
+    { id: 'priority', label: 'Priority Queue', icon: ClockAlert },
+    { id: 'reminders', label: 'Reminders', icon: PhoneCall },
+    { id: 'timeline', label: 'Timeline / Audit'

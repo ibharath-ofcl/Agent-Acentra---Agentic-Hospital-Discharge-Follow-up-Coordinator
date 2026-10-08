@@ -1,0 +1,1049 @@
+1: import { useState, useEffect } from 'react';
+2: import { api } from '../api';
+3: import { Link, useNavigate } from 'react-router-dom';
+4: import { motion, AnimatePresence } from 'framer-motion';
+5: import { Activity, Users, ClockAlert, AlertTriangle, CheckCircle2, Search, Check, LogOut, ShieldCheck, User, PhoneCall, X, Calendar, ArrowRight, Clock, UserCheck, Menu, UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History, BellRing, HelpCircle } from 'lucide-react';
+6: import {
+7:   StatusBadge,
+8:   CareCoordinationPriorityBadge,
+9: } from '../components/common/StatusBadge';
+10: import { useAuth } from '../hooks/useAuth';
+11: import type {
+12:   CareCoordinationPriorityItem,
+13:   NeedsReviewItem,
+14:   Patient,
+15:   CareCoordinationPriorityLevel,
+16: } from '../types';
+17: 
+18: export function DoctorDashboard() {
+19:   const navigate = useNavigate();
+20:   const { logout } = useAuth();
+21: 
+22:   // Navigation tab state
+23:   const [activeNav, setActiveNav] = useState('dashboard');
+24: 
+25:   const sidebarNav = [
+26:     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+27:     { id: 'patients', label: 'Patients', icon: Users },
+28:     { id: 'upload', label: 'Document Upload', icon: UploadCloud },
+29:     { id: 'followup', label: 'Follow-up Tasks', icon: ListTodo },
+30:     { id: 'review', label: 'Needs Human Review', icon: AlertTriangle },
+31:     { id: 'priority', label: 'Priority Queue', icon: ClockAlert },
+32:     { id: 'reminders', label: 'Reminders', icon: PhoneCall },
+33:     { id: 'timeline', label: 'Timeline / Audit', icon: Clock },
+34:   ];
+35: 
+36:   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+37: 
+38:   const [stats, setStats] = useState({ totalPatients: 0, pendingFollowUps: 0, highPriority: 0, needsReview: 0, overdue: 0 });
+39:   const [priorityList, setPriorityList] = useState<any[]>([]);
+40:   const [reviewQueue, setReviewQueue] = useState<any[]>([]);
+41:   const [overdueItems, setOverdueItems] = useState<any[]>([]);
+42:   const [loading, setLoading] = useState(true);
+43:   
+44:   useEffect(() => {
+45:     async function loadData() {
+46:       try {
+47:         const [s, p, r, o] = await Promise.all([
+48:           api.getDoctorStats(),
+49:           api.getDoctorPatients(),
+50:           api.getNeedsReview(),
+51:           api.getOverdue()
+52:         ]);
+53:         setStats(s);
+54:         setPriorityList(p);
+55:         setReviewQueue(r);
+56:         setOverdueItems(o);
+57:       } catch(e) {
+58:         console.error(e);
+59:       } finally {
+60:         setLoading(false);
+61:       }
+62:     }
+63:     loadData();
+64:   }, []);
+65: 
+66: 
+67:   // Filter & Search states
+68:   const [searchQuery, setSearchQuery] = useState('');
+69:   const [priorityFilter, setPriorityFilter] = useState<'all' | CareCoordinationPriorityLevel>('all');
+70:   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'needs-review' | 'overdue'>('all');
+71: 
+72:   // Interactive local states for demo actions
+73:   
+74:   
+75:   const [inspectedPatient, setInspectedPatient] = useState<Patient | null>(null);
+76:   const [uploadFile, setUploadFile] = useState<File | null>(null);
+77:   const [uploadResult, setUploadResult] = useState<any>(null);
+78:   const [extractedData, setExtractedData] = useState<any>(null);
+79:   const handleUpload = async () => {
+80:     if(!uploadFile) return;
+81:     try {
+82:       setToastMessage("Uploading document...");
+83:       const res = await api.uploadDoc(uploadFile);
+84:       setUploadResult(res); setToastMessage("Document uploaded successfully.");
+85:       setUploadFile(null);
+86:     } catch(e) {
+87:       setToastMessage("Upload failed.");
+88:     }
+89:   };
+90: 
+91:   const [selectedReviewItem, setSelectedReviewItem] = useState<NeedsReviewItem | null>(null);
+92:   const [toastMessage, setToastMessage] = useState<string | null>(null);
+93: 
+94:   const handleLogout = () => {
+95:     logout();
+96:     navigate('/login');
+97:   };
+98: 
+99:   // Interactive handler for "Review Now" or "Approve"
+100:   const handleResolveReviewItem = (id: string, issue: string) => {
+101:     setReviewQueue((prev) => prev.filter((item) => item.id !== id));
+102:     setSelectedReviewItem(null);
+103:     setToastMessage(`Clinician approved: "${issue}" resolved & updated`);
+104:     setTimeout(() => setToastMessage(null), 3500);
+105:   };
+106: 
+107:   const handlePriorityAction = (item: CareCoordinationPriorityItem) => {
+108:     if (item.level === 'immediate-review') {
+109:       const match = reviewQueue.find((r) => r.patientId === item.patientId);
+110:       if (match) {
+111:         setSelectedReviewItem(match);
+112:       } else {
+113:         const pt = priorityList.find((p) => p.id === item.patientId);
+114:         if (pt) setInspectedPatient(pt);
+115:       }
+116:     } else {
+117:       const pt = priorityList.find((p) => p.id === item.patientId);
+118:       if (pt) setInspectedPatient(pt);
+119:     }
+120:   };
+121: 
+122:   // Filtered priority list for Patient Queue Table
+123:   const filteredPriorityList = priorityList.filter((item) => {
+124:     const matchesSearch =
+125:       item.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+126:       item.followUp.toLowerCase().includes(searchQuery.toLowerCase()) ||
+127:       item.reason.toLowerCase().includes(searchQuery.toLowerCase());
+128:     const matchesPriority = priorityFilter === 'all' || item.level === priorityFilter;
+129:     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+130:     return matchesSearch && matchesPriority && matchesStatus;
+131:   });
+132: 
+133:   
+134:   useEffect(() => {
+135:     if (uploadResult && !uploadResult.needsReview && uploadResult.documentId) {
+136:       api.getExtraction(uploadResult.documentId).then(data => setExtractedData(data)).catch(e => console.error(e));
+137:     } else {
+138:       setExtractedData(null);
+139:     }
+140:   }, [uploadResult]);
+141: 
+142:   return (
+143:         <div className="flex bg-[#f8fafc] text-slate-900 min-h-screen">
+144:       {/* Toast Notification */}
+145:       <AnimatePresence>
+146:         {toastMessage && (
+147:           <motion.div
+148:             initial={{ opacity: 0, y: -20 }}
+149:             animate={{ opacity: 1, y: 0 }}
+150:             exit={{ opacity: 0, y: -20 }}
+151:             className="fixed top-4 right-4 z-[60] bg-[#052429] border border-[#00e575] text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2"
+152:           >
+153:             <CheckCircle2 className="w-4 h-4 text-[#00e575]" />
+154:             <span>{toastMessage}</span>
+155:           </motion.div>
+156:         )}
+157:       </AnimatePresence>
+158: 
+159:       {/* Desktop Sidebar */}
+160:       <aside className="hidden lg:flex flex-col w-64 bg-[#052429] border-r border-[#0e4851] flex-shrink-0 fixed inset-y-0 z-40">
+161:         <div className="h-16 flex items-center gap-3 px-5 border-b border-[#0e4851]">
+162:           <Link to="/" className="flex items-center gap-2">
+163:             <div className="w-8 h-8 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
+164:               <Activity className="w-4.5 h-4.5 stroke-[2.5]" />
+165:             </div>
+166:             <span className="font-bold text-base tracking-tight text-white line-clamp-1">
+167:               CareFlow <span className="text-[#00e575]">AI</span>
+168:             </span>
+169:           </Link>
+170:         </div>
+171:         
+172:         <div className="px-5 py-3 border-b border-[#0e4851]">
+173:           <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Role</div>
+174:           <div className="text-xs font-bold text-[#00e575]">Coordinator Command</div>
+175:         </div>
+176: 
+177:         <nav className="flex-1 overflow-y-auto hide-scrollbar py-4 px-3 space-y-1">
+178:           {sidebarNav.map((item) => (
+179:             <button
+180:               key={item.id}
+181:               onClick={() => setActiveNav(item.id)}
+182:               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
+183:                 activeNav === item.id
+184:                   ? 'bg-[#00e575] text-[#052429]'
+185:                   : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
+186:               }`}
+187:             >
+188:               <item.icon className="w-4 h-4 shrink-0" />
+189:               {item.label}
+190:             </button>
+191:           ))}
+192:         </nav>
+193: 
+194:         <div className="p-4 border-t border-[#0e4851] space-y-2">
+195:           <div className="flex items-center gap-2 mb-4 px-1">
+196:             <div className="w-8 h-8 rounded-full bg-[#0a383f] text-[#00e575] border border-[#145e69] font-black flex items-center justify-center text-xs shrink-0">
+197:               MP
+198:             </div>
+199:             <div className="text-left text-white overflow-hidden">
+200:               <div className="font-bold text-xs truncate">Dr. Meera Patel</div>
+201:               <div className="text-[10px] text-slate-400 truncate">Coordinator</div>
+202:             </div>
+203:           </div>
+204:           <Link
+205:             to="/patient"
+206:             className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-[#00e575] bg-[#072d33] hover:bg-[#0a383f] border border-[#0e4851] rounded-lg transition-colors"
+207:           >
+208:             <User className="w-3.5 h-3.5" /> Patient View
+209:           </Link>
+210:           <button
+211:             onClick={handleLogout}
+212:             className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-slate-300 bg-transparent hover:bg-red-950/40 hover:text-red-400 border border-transparent rounded-lg transition-colors cursor-pointer"
+213:           >
+214:             <LogOut className="w-3.5 h-3.5" /> Sign Out
+215:           </button>
+216:         </div>
+217:       </aside>
+218: 
+219:       {/* Main Content Pane */}
+220:       <div className="flex-1 flex flex-col min-w-0 lg:ml-64 relative">
+221:         {/* Mobile Header */}
+222:         <header className="lg:hidden sticky top-0 z-30 bg-[#052429] text-white border-b border-[#0e4851] h-16 flex items-center justify-between px-4">
+223:           <div className="flex items-center gap-3">
+224:             <button
+225:               onClick={() => setMobileMenuOpen(true)}
+226:               className="p-1.5 -ml-1.5 text-slate-300 hover:text-white rounded-lg focus:outline-none"
+227:             >
+228:               <Menu className="w-6 h-6" />
+229:             </button>
+230:             <Link to="/" className="flex items-center gap-2">
+231:               <div className="w-7 h-7 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
+232:                 <Activity className="w-4 h-4 stroke-[2.5]" />
+233:               </div>
+234:               <span className="font-bold text-sm tracking-tight text-white">
+235:                 CareFlow <span className="text-[#00e575]">AI</span>
+236:               </span>
+237:             </Link>
+238:           </div>
+239:           <button onClick={handleLogout} className="p-1.5 text-slate-300 hover:text-red-400">
+240:             <LogOut className="w-5 h-5" />
+241:           </button>
+242:         </header>
+243: 
+244:         {/* Mobile Sidebar Off-canvas */}
+245:         <AnimatePresence>
+246:           {mobileMenuOpen && (
+247:             <>
+248:               <motion.div
+249:                 initial={{ opacity: 0 }}
+250:                 animate={{ opacity: 1 }}
+251:                 exit={{ opacity: 0 }}
+252:                 onClick={() => setMobileMenuOpen(false)}
+253:                 className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+254:               />
+255:               <motion.div
+256:                 initial={{ x: '-100%' }}
+257:                 animate={{ x: 0 }}
+258:                 exit={{ x: '-100%' }}
+259:                 transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+260:                 className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#052429] border-r border-[#0e4851] flex flex-col"
+261:               >
+262:                 <div className="h-16 flex items-center justify-between px-5 border-b border-[#0e4851]">
+263:                   <span className="font-bold text-base tracking-tight text-white">Menu</span>
+264:                   <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 text-slate-300 hover:text-white">
+265:                     <X className="w-5 h-5" />
+266:                   </button>
+267:                 </div>
+268:                 <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+269:                   {sidebarNav.map((item) => (
+270:                     <button
+271:                       key={item.id}
+272:                       onClick={() => { setActiveNav(item.id); setMobileMenuOpen(false) }}
+273:                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
+274:                         activeNav === item.id
+275:                           ? 'bg-[#00e575] text-[#052429]'
+276:                           : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
+277:                       }`}
+278:                     >
+279:                       <item.icon className="w-4 h-4 shrink-0" />
+280:                       {item.label}
+281:                     </button>
+282:                   ))}
+283:                 </nav>
+284:               </motion.div>
+285:             </>
+286:           )}
+287:         </AnimatePresence>
+288: 
+289:         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-20">
+290:         {/* Top Header & Core Question (Section 5) */}
+291:         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 mb-6">
+292:           <div>
+293:             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+294:               Discharge Coordination Command Center
+295:             </h1>
+296:             <p className="mt-1 text-sm font-semibold text-teal-900">
+297:               “Which patients need my attention?”
+298:             </p>
+299:           </div>
+300: 
+301:           {/* Safety Rule Banner */}
+302:           <div className="bg-[#e6fcf1] border border-[#a7f3d0] px-3.5 py-2 rounded-xl text-xs text-[#052429] flex items-center gap-2 font-medium">
+303:             <ShieldCheck className="w-4 h-4 text-[#008742] shrink-0" />
+304:             <span>Care Coordination Priority based on documented timelines — Zero autonomous clinical diagnosis.</span>
+305:           </div>
+306:         </div>
+307: 
+308:         {/* SECTION 5: TOP STATISTICS (5 Required Cards) */}
+309:         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4 mb-8 items-stretch">
+310:           {/* 1. Total Patients */}
+311:           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
+312:             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+313:               <Users className="w-3.5 h-3.5 text-teal-800" /> Total Patients
+314:             </div>
+315:             <div className="my-2 text-2xl font-black text-slate-900">{stats.totalPatients}</div>
+316:             <div className="text-[11px] text-slate-500">Active discharged cohort</div>
+317:           </div>
+318: 
+319:           {/* 2. Pending Follow-ups */}
+320:           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
+321:             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+322:               <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Follow-ups
+323:             </div>
+324:             <div className="my-2 text-2xl font-black text-slate-900">{stats.pendingFollowUps}</div>
+325:             <div className="text-[11px] text-amber-700 font-medium">Scheduled / In Progress</div>
+326:           </div>
+327: 
+328:           {/* 3. High Priority */}
+329:           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs h-full flex flex-col justify-between">
+330:             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+331:               <ClockAlert className="w-3.5 h-3.5 text-amber-600" /> High Priority
+332:             </div>
+333:             <div className="my-2 text-2xl font-black text-slate-900">2</div>
+334:             <div className="text-[11px] text-amber-700 font-medium">Approaching deadline</div>
+335:           </div>
+336: 
+337:           {/* 4. Needs Review */}
+338:           <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-300 shadow-xs h-full flex flex-col justify-between">
+339:             <div className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+340:               <AlertTriangle className="w-3.5 h-3.5 text-amber-700" /> Needs Review
+341:             </div>
+342:             <div className="my-2 text-2xl font-black text-amber-900">{reviewQueue.length}</div>
+343:             <div className="text-[11px] text-amber-800 font-medium">Flagged for clinician check</div>
+344:           </div>
+345: 
+346:           {/* 5. Overdue */}
+347:           <div className="bg-red-50/70 p-4 rounded-xl border border-red-300 shadow-xs h-full flex flex-col justify-between">
+348:             <div className="text-xs font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
+349:               <ClockAlert className="w-3.5 h-3.5 text-red-600" /> Overdue
+350:             </div>
+351:             <div className="my-2 text-2xl font-black text-red-700">{overdueItems.length}</div>
+352:             <div className="text-[11px] text-red-700 font-medium">Deadline lapsed</div>
+353:           </div>
+354:         </div>
+355: 
+356:         {/* ========================================================
+357:             SECTION 6: CARE COORDINATION PRIORITY (PROMINENT FEATURE)
+358:             ======================================================== */}
+359:         {(activeNav === 'dashboard' || activeNav === 'priority' || activeNav === 'followup') && (
+360:           <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-7 shadow-xs mb-8">
+361:           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+362:             <div>
+363:               <div className="flex items-center gap-2">
+364:                 <span className="w-2.5 h-2.5 rounded-full bg-[#00e575] animate-pulse-soft" />
+365:                 <h2 className="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-wider">
+366:                   Care Coordination Priority
+367:                 </h2>
+368:                 <span className="text-xs font-bold bg-[#052429] text-[#00e575] px-2.5 py-0.5 rounded-full">
+369:                   Autonomous Triage Index
+370:                 </span>
+371:               </div>
+372:               <p className="text-xs text-slate-600 mt-1">
+373:                 Patients ranked strictly by documented follow-up deadlines, overdue tasks, and flagged instructions.
+374:               </p>
+375:             </div>
+376: 
+377:             <div className="flex items-center gap-2 text-xs flex-wrap">
+378:               <span className="text-slate-500 font-medium">Rank Criteria:</span>
+379:               <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-700">🔴 Immediate Review</span>
+380:               <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-700">🟠 High Priority</span>
+381:               <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px] font-semibold text-slate-700">🟢 Routine</span>
+382:             </div>
+383:           </div>
+384: 
+385:           {/* Cards for each priority tier */}
+386:           <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+387:             {/* 🔴 IMMEDIATE REVIEW TIER */}
+388:             <div className="p-4 rounded-xl border border-red-200 bg-red-50/40 flex flex-col justify-between h-full">
+389:               <div>
+390:                 <div className="flex items-center justify-between">
+391:                   <CareCoordinationPriorityBadge level="immediate-review" size="sm" />
+392:                   <span className="text-[11px] font-mono text-red-700 font-bold">Priority #1</span>
+393:                 </div>
+394:                 <h3 className="mt-3 text-base font-bold text-slate-900">Arun Kumar</h3>
+395:                 <p className="text-xs text-red-900 font-medium mt-1 leading-snug">
+396:                   "Documented urgent follow-up / unresolved clinical instruction"
+397:                 </p>
+398:                 <div className="mt-2 text-[11px] text-slate-600">
+399:                   Target: <strong>Cardiology & Nephrology Date</strong> • Due 15 Oct
+400:                 </div>
+401:                 {/* Source cite */}
+402:                 <div className="mt-2 text-[10px] text-slate-500 font-mono">
+403:                   Source: Discharge Summary • Page 2 & 4
+404:                 </div>
+405:               </div>
+406: 
+407:               <button
+408:                 onClick={() => {
+409:                   const item = priorityList.find((p) => p.id === 'CCP001');
+410:                   if (item) handlePriorityAction(item);
+411:                 }}
+412:                 className="mt-4 w-full py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+413:               >
+414:                 Review Now
+415:                 <ArrowRight className="w-3.5 h-3.5" />
+416:               </button>
+417:             </div>
+418: 
+419:             {/* 🟠 HIGH FOLLOW-UP PRIORITY TIER */}
+420:             <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between h-full">
+421:               <div>
+422:                 <div className="flex items-center justify-between">
+423:                   <CareCoordinationPriorityBadge level="high-priority" size="sm" />
+424:                   <span className="text-[11px] font-mono text-amber-800 font-bold">Priority #2</span>
+425:                 </div>
+426:                 <h3 className="mt-3 text-base font-bold text-slate-900">Priya Sharma</h3>
+427:                 <p className="text-xs text-amber-950 font-medium mt-1 leading-snug">
+428:                   "Follow-up deadline approaching"
+429:                 </p>
+430:                 <div className="mt-2 text-[11px] text-slate-600">
+431:                   Target: <strong>Fasting Blood Glucose & HbA1c</strong> • Due 18 Oct
+432:                 </div>
+433:                 {/* Source cite */}
+434:                 <div className="mt-2 text-[10px] text-slate-500 font-mono">
+435:                   Source: Discharge Summary • Page 2
+436:                 </div>
+437:               </div>
+438: 
+439:               <button
+440:                 onClick={() => {
+441:                   const item = priorityList.find((p) => p.id === 'CCP003');
+442:                   if (item) handlePriorityAction(item);
+443:                 }}
+444:                 className="mt-4 w-full py-2.5 text-xs font-bold text-amber-950 bg-amber-200 hover:bg-amber-300 rounded-xl transition-colors border border-amber-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+445:               >
+446:                 Review
+447:                 <ArrowRight className="w-3.5 h-3.5" />
+448:               </button>
+449:             </div>
+450: 
+451:             {/* 🟢 ROUTINE TIER */}
+452:             <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col justify-between h-full">
+453:               <div>
+454:                 <div className="flex items-center justify-between">
+455:                   <CareCoordinationPriorityBadge level="routine" size="sm" />
+456:                   <span className="text-[11px] font-mono text-emerald-800 font-bold">Priority #3</span>
+457:                 </div>
+458:                 <h3 className="mt-3 text-base font-bold text-slate-900">Rahul Kumar</h3>
+459:                 <p className="text-xs text-emerald-950 font-medium mt-1 leading-snug">
+460:                   "Upcoming routine follow-up"
+461:                 </p>
+462:                 <div className="mt-2 text-[11px] text-slate-600">
+463:                   Target: <strong>Surgical site wound inspection</strong> • Due 22 Oct
+464:                 </div>
+465:                 {/* Source cite */}
+466:                 <div className="mt-2 text-[10px] text-slate-500 font-mono">
+467:                   Source: Discharge Summary • Page 1
+468:                 </div>
+469:               </div>
+470: 
+471:               <button
+472:                 onClick={() => {
+473:                   const item = priorityList.find((p) => p.id === 'CCP005');
+474:                   if (item) handlePriorityAction(item);
+475:                 }}
+476:                 className="mt-4 w-full py-2.5 text-xs font-bold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 rounded-xl transition-colors border border-emerald-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+477:               >
+478:                 View
+479:                 <ArrowRight className="w-3.5 h-3.5" />
+480:               </button>
+481:             </div>
+482:           </div>
+483:         </div>
+484:         )}
+485: 
+486:         {/* ========================================================
+487:             SECTION 8: NEEDS HUMAN REVIEW QUEUE
+488:             ======================================================== */}
+489:         {(activeNav === 'dashboard' || activeNav === 'review' || activeNav === 'followup') && (
+490:           <div className="bg-white rounded-xl border border-amber-300 shadow-xs p-6 mb-8">
+491:           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-100 mb-4">
+492:             <div className="flex items-center gap-2">
+493:               <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+494:                 <AlertTriangle className="w-4.5 h-4.5" />
+495:               </div>
+496:               <div>
+497:                 <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+498:                   Needs Human Review
+499:                 </h3>
+500:                 <p className="text-xs text-slate-500">
+501:                   AI does not resolve these clinically — Human care coordinator or doctor reviews them
+502:                 </p>
+503:               </div>
+504:             </div>
+505:             <span className="text-xs font-bold bg-amber-100 text-amber-900 px-3 py-1 rounded-full border border-amber-200">
+506:               {reviewQueue.length} Active Items
+507:             </span>
+508:           </div>
+509: 
+510:           <div className="space-y-3">
+511:             {reviewQueue.map((item) => (
+512:               <div
+513:                 key={item.id}
+514:                 className="p-4 rounded-xl border border-amber-200/90 bg-amber-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+515:               >
+516:                 <div className="min-w-0 flex-1">
+517:                   <div className="flex items-center gap-2 flex-wrap">
+518:                     <span className="text-xs font-bold text-slate-900">{item.patientName}</span>
+519:                     <span className="text-[10px] uppercase font-bold text-amber-800 bg-amber-200 px-2 py-0.5 rounded border border-amber-300">
+520:                       {item.category.replace('-', ' ')}
+521:                     </span>
+522:                     <span className="text-xs text-slate-400">•</span>
+523:                     <span className="text-[11px] text-slate-600 font-mono">
+524:                       Source: {item.source} • Page {item.page}
+525:                     </span>
+526:                   </div>
+527: 
+528:                   <p className="text-xs font-semibold text-slate-900 mt-1">{item.issue}</p>
+529:                   <p className="text-[11px] text-amber-900 font-medium mt-0.5">
+530:                     Flag: {item.flagReason}
+531:                   </p>
+532:                 </div>
+533: 
+534:                 <div className="flex items-center gap-2 shrink-0">
+535:                   <button
+536:                     onClick={() => setSelectedReviewItem(item)}
+537:                     className="px-3.5 py-2 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-lg shadow-xs flex items-center gap-1 cursor-pointer"
+538:                   >
+539:                     Review
+540:                   </button>
+541:                   <button
+542:                     onClick={() => handleResolveReviewItem(item.id, item.issue)}
+543:                     className="px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer"
+544:                   >
+545:                     <Check className="w-3.5 h-3.5" /> Approve
+546:                   </button>
+547:                 </div>
+548:               </div>
+549:             ))}
+550:           </div>
+551:         </div>
+552:         )}
+553: 
+554:         {/* ========================================================
+555:             SECTION 7: DOCTOR PATIENT QUEUE TABLE
+556:             ======================================================== */}
+557:         {(activeNav === 'dashboard' || activeNav === 'patients') && (
+558:           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 mb-8">
+559:           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-4">
+560:             <div>
+561:               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+562:                 <Users className="w-4 h-4 text-teal-800" /> Discharged Patient Cohort Queue
+563:               </h3>
+564:               <p className="text-xs text-slate-500 mt-0.5">
+565:                 Centralized registry with explicit Care Coordination Priority indicators
+566:               </p>
+567:             </div>
+568: 
+569:             {/* Search & Filters */}
+570:             <div className="flex flex-wrap items-center gap-2.5">
+571:               {/* Search */}
+572:               <div className="relative w-full sm:w-56">
+573:                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+574:                 <input
+575:                   type="text"
+576:                   value={searchQuery}
+577:                   onChange={(e) => setSearchQuery(e.target.value)}
+578:                   placeholder="Filter patient name..."
+579:                   className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#00e575] focus:ring-1 focus:ring-[#00e575]"
+580:                 />
+581:               </div>
+582: 
+583:               {/* Priority Filter */}
+584:               <select
+585:                 value={priorityFilter}
+586:                 aria-label="Filter by priority"
+587:                 onChange={(e) => setPriorityFilter(e.target.value as any)}
+588:                 className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 cursor-pointer focus:outline-none"
+589:               >
+590:                 <option value="all">All Priorities</option>
+591:                 <option value="immediate-review">🔴 Immediate Review</option>
+592:                 <option value="high-priority">🟠 High Priority</option>
+593:                 <option value="routine">🟢 Routine</option>
+594:               </select>
+595: 
+596:               {/* Status Filter */}
+597:               <select
+598:                 value={statusFilter}
+599:                 aria-label="Filter by status"
+600:                 onChange={(e) => setStatusFilter(e.target.value as any)}
+601:                 className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 cursor-pointer focus:outline-none"
+602:               >
+603:                 <option value="all">All Statuses</option>
+604:                 <option value="pending">Pending</option>
+605:                 <option value="needs-review">Needs Review</option>
+606:                 <option value="overdue">Overdue</option>
+607:               </select>
+608:             </div>
+609:           </div>
+610: 
+611:           {/* Patient Queue Table */}
+612:           <div className="overflow-x-auto">
+613:             <table className="w-full text-left text-xs">
+614:               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-y border-slate-200">
+615:                 <tr>
+616:                   <th className="py-3 px-4 font-bold">Patient</th>
+617:                   <th className="py-3 px-4 font-bold">Follow-up</th>
+618:                   <th className="py-3 px-4 font-bold">Due Date</th>
+619:                   <th className="py-3 px-4 font-bold">Priority</th>
+620:                   <th className="py-3 px-4 font-bold">Status</th>
+621:                   <th className="py-3 px-4 font-bold text-right">Action</th>
+622:                 </tr>
+623:               </thead>
+624:               <tbody className="divide-y divide-slate-100">
+625:                 {filteredPriorityList.length === 0 ? (
+626:                   <tr>
+627:                     <td colSpan={6} className="py-12 px-4 text-center">
+628:                       <div className="flex flex-col items-center justify-center text-slate-500">
+629:                         <UserCheck className="w-8 h-8 text-slate-300 mb-3" />
+630:                         <p className="text-sm font-medium text-slate-900">No patients found</p>
+631:                         <p className="text-xs mt-1 text-slate-500">Try adjusting your filters or search query.</p>
+632:                       </div>
+633:                     </td>
+634:                   </tr>
+635:                 ) : (
+636:                   filteredPriorityList.map((item) => (
+637:                     <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+638:                       {/* Patient */}
+639:                       <td className="py-3.5 px-4 align-middle">
+640:                         <div className="font-bold text-slate-900">{item.patientName}</div>
+641:                         <div className="text-[10px] text-slate-500 font-mono">ID: {item.patientId}</div>
+642:                       </td>
+643: 
+644:                       {/* Follow-up */}
+645:                       <td className="py-3.5 px-4 align-middle text-slate-700 font-medium">
+646:                         <div className="font-semibold text-slate-900">{item.followUp}</div>
+647:                         <div className="text-[10px] text-slate-500 truncate max-w-xs">{item.reason}</div>
+648:                       </td>
+649: 
+650:                       {/* Due Date */}
+651:                       <td className="py-3.5 px-4 align-middle text-slate-600 font-medium whitespace-nowrap">
+652:                         <span className="flex items-center gap-1.5">
+653:                           <Calendar className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+654:                           {item.dueDate}
+655:                         </span>
+656:                       </td>
+657: 
+658:                       {/* Priority */}
+659:                       <td className="py-3.5 px-4 align-middle whitespace-nowrap">
+660:                         <CareCoordinationPriorityBadge level={item.level} size="sm" />
+661:                       </td>
+662: 
+663:                       {/* Status */}
+664:                       <td className="py-3.5 px-4 align-middle whitespace-nowrap">
+665:                         <StatusBadge status={item.status} size="sm" />
+666:                       </td>
+667: 
+668:                       {/* Action */}
+669:                       <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
+670:                         <button
+671:                           onClick={() => handlePriorityAction(item)}
+672:                           className={`min-w-[110px] inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
+673:                             item.level === 'immediate-review'
+674:                               ? 'bg-red-600 hover:bg-red-700 text-white shadow-xs'
+675:                               : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200'
+676:                           }`}
+677:                         >
+678:                           {item.actionLabel}
+679:                         </button>
+680:                       </td>
+681:                     </tr>
+682:                   ))
+683:                 )}
+684:               </tbody>
+685:             </table>
+686:           </div>
+687:         </div>
+688:         )}
+689: 
+690:         {/* ========================================================
+691:             SECTION 9 & 11: UPCOMING, OVERDUE & AI REMINDER ACTIVITY
+692:             ======================================================== */}
+693:         {(activeNav === 'dashboard' || activeNav === 'reminders' || activeNav === 'timeline' || activeNav === 'followup') && (
+694:           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+695:           {/* SECTION 9: OVERDUE FOLLOW-UPS */}
+696:           <div className="bg-red-50/60 rounded-xl border border-red-200 p-6 shadow-xs h-full flex flex-col justify-between">
+697:             <div>
+698:               <div className="flex items-center justify-between pb-3 border-b border-red-200 mb-4">
+699:                 <h3 className="text-xs font-extrabold text-red-950 uppercase tracking-wider flex items-center gap-1.5">
+700:                   <ClockAlert className="w-4 h-4 text-red-600" /> OVERDUE FOLLOW-UPS
+701:                 </h3>
+702:                 <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full border border-red-300">
+703:                   Lapsed Deadline
+704:                 </span>
+705:               </div>
+706: 
+707:               <div className="space-y-3">
+708:                 {overdueItems.map((od) => (
+709:                   <div key={od.id} className="p-4 bg-white rounded-xl border border-red-200 text-xs shadow-xs">
+710:                     <div className="flex items-center justify-between">
+711:                       <span className="font-bold text-red-900 text-sm">{od.patientName}</span>
+712:                       <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+713:                         {od.daysOverdue} day overdue
+714:                       </span>
+715:                     </div>
+716:                     <div className="mt-1 text-slate-800 font-semibold">{od.taskTitle}</div>
+717:                     <div className="text-slate-600 mt-0.5">Due: <strong className="text-red-700">{od.dueDate}</strong></div>
+718:                     <div className="text-[11px] text-slate-500 mt-1">Attending: {od.attending} • {od.contactPhone}</div>
+719: 
+720:                     <button
+721:                       onClick={() => {
+722:                         setToastMessage(`Coordinator task opened for ${od.patientName}`);
+723:                         setTimeout(() => setToastMessage(null), 3000);
+724:                       }}
+725:                       className="mt-3 w-full py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs cursor-pointer"
+726:                     >
+727:                       Initiate Care Outreach
+728:                     </button>
+729:                   </div>
+730:                 ))}
+731:               </div>
+732:             </div>
+733: 
+734:             <div className="mt-4 pt-3 border-t border-red-200 text-[11px] text-red-800">
+735:               Immediate coordination required for high-risk patients
+736:             </div>
+737:           </div>
+738: 
+739:           {/* SECTION 9: UPCOMING DEADLINES */}
+740:           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+741:             <div>
+742:               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-3 border-b border-slate-100 flex items-center gap-1.5">
+743:                 <Calendar className="w-4 h-4 text-teal-800" /> Upcoming Deadlines
+744:               </h3>
+745: 
+746:               <div className="space-y-3">
+747:                 {overdueItems.map((ud) => (
+748:                   <div key={ud.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+749:                     <div className="flex items-center justify-between">
+750:                       <span className="font-bold text-slate-900">{ud.patientName}</span>
+751:                       <span className="text-[11px] text-slate-600 font-mono">{ud.dueDate}</span>
+752:                     </div>
+753:                     <div className="text-slate-700 font-medium mt-0.5">{ud.taskTitle}</div>
+754:                     <div className="text-[11px] text-slate-500 mt-0.5">Specialty: {ud.specialty}</div>
+755:                   </div>
+756:                 ))}
+757:               </div>
+758:             </div>
+759: 
+760:             <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+761:               Timeline monitored continuously against hospital protocol
+762:             </div>
+763:           </div>
+764: 
+765:           {/* SECTION 11: AI REMINDER ACTIVITY PANEL */}
+766:           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+767:             <div>
+768:               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+769:                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+770:                   <PhoneCall className="w-4 h-4 text-teal-800" /> AI Reminder Simulation
+771:                 </h3>
+772:                 <span className="text-[10px] text-teal-800 bg-teal-50 px-2 py-0.5 rounded font-semibold border border-teal-200">
+773:                   Informational
+774:                 </span>
+775:               </div>
+776: 
+777:               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+778:                 <div className="flex items-center justify-between font-bold text-slate-900">
+779:                   <span>{(priorityList[0]?.patientName || 'Loading...')}</span>
+780:                   <span className="text-[10px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+781:                     {('Upcoming')}
+782:                   </span>
+783:                 </div>
+784:                 <p className="text-[11px] text-slate-600 mt-1">
+785:                   <strong>Scheduled:</strong> {('Today, 2:00 PM')}
+786:                 </p>
+787:                 <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+788:                   <strong>Purpose:</strong> {('Post-discharge routine check')}
+789:                 </p>
+790: 
+791:                 {/* Simulation Sequence */}
+792:                 <div className="mt-3 pt-2 border-t border-slate-200 space-y-1 text-[11px] text-slate-600 font-mono">
+793:                   <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+794:                     <span>Attempt 1 — No answer</span>
+795:                     <span className="text-amber-600 font-bold">Recorded</span>
+796:                   </div>
+797:                   <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+798:                     <span>Attempt 2 — Scheduled</span>
+799:                     <span className="text-teal-700 font-bold">In 30m</span>
+800:                   </div>
+801:                   <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+802:                     <span>SMS fallback — Pending</span>
+803:                     <span className="text-slate-400">Queued</span>
+804:                   </div>
+805:                 </div>
+806:               </div>
+807:             </div>
+808: 
+809:             <div className="mt-3 text-[11px] text-slate-500 flex items-center gap-1">
+810:               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+811:               <span>Safety Boundary: Never provides clinical advice.</span>
+812:             </div>
+813:           </div>
+814:         </div>
+815:         )}
+816:       
+817:         {(activeNav === 'upload') && (
+818:           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-3xl mx-auto mt-8">
+819:             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+820:               <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-200">
+821:                 <UploadCloud className="w-5 h-5 text-teal-800" />
+822:               </div>
+823:               <div>
+824:                 <h2 className="text-xl font-bold text-slate-900">Upload Clinical Document</h2>
+825:                 <p className="text-xs text-slate-500">Securely ingest Discharge Summaries for AI Extraction</p>
+826:               </div>
+827:             </div>
+828:             
+829:             <label className="border-2 border-dashed border-slate-300 rounded-xl p-10 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
+830:               <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => {
+831:                  if(e.target.files && e.target.files[0]) setUploadFile(e.target.files[0]);
+832:               }} />
+833:               <div className="w-16 h-16 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-4 group-hover:shadow-md transition-shadow">
+834:                 <FileText className="w-8 h-8 text-slate-400 group-hover:text-teal-600 transition-colors" />
+835:               </div>
+836:               <h3 className="text-sm font-bold text-slate-900 mb-1">{uploadFile ? uploadFile.name : "Click to select or drag and drop"}</h3>
+837:               <p className="text-xs text-slate-500 mb-4">Supported formats: PDF, DOCX, XLS, XLSX</p>
+838:               <div className="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-lg shadow-xs transition-colors">
+839:                 {uploadFile ? "Change File" : "Select File"}
+840:               </div>
+841:             </label>
+842:             {uploadFile && (
+843:               <button onClick={handleUpload} className="mt-4 w-full py-3 bg-[#00e575] hover:bg-[#00cb68] text-[#052429] font-bold rounded-xl shadow-md transition-colors">
+844:                 Confirm & Upload Document
+845:               </button>
+846:             )}
+847:             
+848:             {uploadResult && uploadResult.needsReview && (
+849:               <div className="mt-6 bg-red-50/80 border border-red-300 rounded-xl p-4 flex flex-col gap-2">
+850:                 <div className="flex items-center gap-2 text-red-900 font-bold text-sm">
+851:                   <AlertTriangle className="w-5 h-5 text-red-600" /> ⚠ Needs Manual Correction
+852:                 </div>
+853:                 <div className="text-xs text-red-800 font-medium pl-2">
+854:                   <strong className="block mb-1">Reason:</strong>
+855:                   {uploadResult.reason || "Patient identifier could not be confidently matched."}
+856:                 </div>
+857:                 <div className="text-[11px] text-slate-500 mt-2 pl-2">Document ID: {uploadResult.documentId}</div>
+858:               </div>
+859:             )}
+860:             {uploadResult && !uploadResult.needsReview && (
+861:               <div className="mt-6 bg-emerald-50 border border-emerald-300 rounded-xl p-4 flex flex-col gap-2">
+862:                 <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+863:                   <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Document Mapped Structure
+864:                 </div>
+865:                 <div className="text-xs text-emerald-800 font-medium pl-2">
+866:                   Successfully mapped to Patient: <strong>{uploadResult.patientName}</strong>
+867:                 </div>
+868:                 <div className="text-[11px] text-slate-500 mt-2 pl-2">Document ID: {uploadResult.documentId}</div>
+869:               </div>
+870:             )}
+871:             {extractedData && (
+872:               <div className="mt-6 border border-teal-200 rounded-xl overflow-hidden bg-white">
+873:                 <div className="bg-teal-50 px-4 py-3 font-semibold text-teal-900 border-b border-teal-200">
+874:                   Document Intelligence Extraction
+875:                 </div>
+876:                 <div className="p-4 space-y-4 text-sm text-slate-700">
+877:                   <div className="flex gap-4">
+878:                     <div className="flex-1"><strong className="text-slate-900">MRN:</strong> {extractedData.patient_mrn}</div>
+879:                     <div className="flex-1"><strong className="text-slate-900">Discharge:</strong> {extractedData.discharge_date}</div>
+880:                   </div>
+881:                   {extractedData.source_evidence && extractedData.source_evidence.length > 0 && (
+882:                     <div className="mt-4 pt-4 border-t border-slate-100">
+883:                       <strong className="text-slate-500 block mb-1 text-xs uppercase tracking-wider">Source Evidence snippet:</strong>
+884:                       <div className="bg-slate-50 p-2 rounded text-xs italic text-slate-600 border border-slate-200">
+885:                         "{extractedData.source_evidence[0]?.extracted_text}"
+886:                       </div>
+887:                     </div>
+888:                   )}
+889:                 </div>
+890:               </div>
+891:             )}
+892: 
+893:             
+894: 
+895:             <div className="mt-4 flex items-center gap-2 text-[11px] text-slate-600 bg-slate-100 p-3 rounded-lg border border-slate-200">
+896:               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+897:               <p>This is a frontend demonstration interface. Uploaded documents will not be sent to any backend AI processing engine during Phase 1.</p>
+898:             </div>
+899:           </div>
+900:         )}
+901: 
+902:         </main>
+903: {/* Review Modal (for resolving Needs Human Review queue items) */}
+904:       <AnimatePresence>
+905:         {selectedReviewItem && (
+906:           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+907:             <motion.div
+908:               initial={{ opacity: 0, scale: 0.95 }}
+909:               animate={{ opacity: 1, scale: 1 }}
+910:               exit={{ opacity: 0, scale: 0.95 }}
+911:               className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative"
+912:             >
+913:               <button
+914:                 onClick={() => setSelectedReviewItem(null)}
+915:                 className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+916:               >
+917:                 <X className="w-5 h-5" />
+918:               </button>
+919: 
+920:               <div className="flex items-center gap-2 mb-2">
+921:                 <span className="text-xs font-bold uppercase text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded border border-amber-300">
+922:                   Clinical Review Tray
+923:                 </span>
+924:                 <span className="text-xs font-mono text-slate-500">Ref: #{selectedReviewItem.id}</span>
+925:               </div>
+926: 
+927:               <h3 className="text-xl font-bold text-slate-900">{selectedReviewItem.patientName}</h3>
+928:               <p className="text-sm font-semibold text-amber-950 mt-1">{selectedReviewItem.issue}</p>
+929: 
+930:               <div className="mt-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+931:                 <div>
+932:                   <strong className="text-slate-700 block">Extracted Sentence from EHR Document:</strong>
+933:                   <div className="mt-1 font-mono text-slate-800 bg-white p-2 rounded border border-slate-200">
+934:                     "{selectedReviewItem.extractedText}"
+935:                   </div>
+936:                 </div>
+937:                 <div>
+938:                   <strong className="text-slate-700">Flag Reason:</strong>{' '}
+939:                   <span className="text-slate-600">{selectedReviewItem.flagReason}</span>
+940:                 </div>
+941:                 <div>
+942:                   <strong className="text-slate-700">Citation:</strong>{' '}
+943:                   <span className="font-mono text-teal-800 font-semibold">{selectedReviewItem.source} • Page {selectedReviewItem.page}</span>
+944:                 </div>
+945:               </div>
+946: 
+947:               <div className="mt-6 flex justify-end gap-2">
+948:                 <button
+949:                   onClick={() => setSelectedReviewItem(null)}
+950:                   className="px-4 py-2 text-xs font-semibold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 cursor-pointer"
+951:                 >
+952:                   Dismiss
+953:                 </button>
+954:                 <button
+955:                   onClick={() => handleResolveReviewItem(selectedReviewItem.id, selectedReviewItem.issue)}
+956:                   className="px-4 py-2 text-xs font-bold text-[#052429] bg-[#00e575] hover:bg-[#00cb68] rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+957:                 >
+958:                   <Check className="w-4 h-4 stroke-[2.5]" />
+959:                   Approve Clinical Resolution
+960:                 </button>
+961:               </div>
+962:             </motion.div>
+963:           </div>
+964:         )}
+965:       </AnimatePresence>
+966: 
+967:       {/* Patient Record Inspection Modal */}
+968:       <AnimatePresence>
+969:         {inspectedPatient && (
+970:           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+971:             <motion.div
+972:               initial={{ opacity: 0, scale: 0.95 }}
+973:               animate={{ opacity: 1, scale: 1 }}
+974:               exit={{ opacity: 0, scale: 0.95 }}
+975:               className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative"
+976:             >
+977:               <button
+978:                 onClick={() => setInspectedPatient(null)}
+979:                 className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+980:               >
+981:                 <X className="w-5 h-5" />
+982:               </button>
+983: 
+984:               <div className="flex items-center gap-3 mb-4">
+985:                 <div className="w-10 h-10 rounded-xl bg-teal-800 text-white font-bold flex items-center justify-center text-sm">
+986:                   {inspectedPatient.name.slice(0, 2).toUpperCase()}
+987:                 </div>
+988:                 <div>
+989:                   <h3 className="text-base font-bold text-slate-900">{inspectedPatient.name}</h3>
+990:                   <p className="text-xs text-slate-500 font-mono">
+991:                     MRN: {inspectedPatient.id} • {inspectedPatient.gender}, {inspectedPatient.age} yo
+992:                   </p>
+993:                 </div>
+994:               </div>
+995: 
+996:               <div className="space-y-3 text-xs border-t border-slate-100 pt-4">
+997:                 <div>
+998:                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Primary Diagnosis</span>
+999:                   <span className="text-slate-900 font-semibold">{inspectedPatient.primaryDiagnosis}</span>
+1000:                 </div>
+1001:                 <div className="grid grid-cols-2 gap-3">
+1002:                   <div>
+1003:                     <span className="text-slate-400 block text-[10px] uppercase font-bold">Admitted</span>
+1004:                     <span className="text-slate-800">{inspectedPatient.admissionDate}</span>
+1005:                   </div>
+1006:                   <div>
+1007:                     <span className="text-slate-400 block text-[10px] uppercase font-bold">Discharged</span>
+1008:                     <span className="text-slate-800">{inspectedPatient.dischargeDate}</span>
+1009:                   </div>
+1010:                 </div>
+1011:                 <div>
+1012:                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Attending Physician</span>
+1013:                   <span className="text-slate-800">{inspectedPatient.attendingPhysician}</span>
+1014:                 </div>
+1015:                 <div className="grid grid-cols-2 gap-3">
+1016:                   <div>
+1017:                     <span className="text-slate-400 block text-[10px] uppercase font-bold">Contact Phone</span>
+1018:                     <span className="text-slate-800 font-mono">{inspectedPatient.contactPhone}</span>
+1019:                   </div>
+1020:                   <div>
+1021:                     <span className="text-slate-400 block text-[10px] uppercase font-bold">Language</span>
+1022:                     <span className="text-slate-800">{inspectedPatient.preferredLanguage}</span>
+1023:                   </div>
+1024:                 </div>
+1025:               </div>
+1026: 
+1027:               <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2">
+1028:                 <button
+1029:                   onClick={() => setInspectedPatient(null)}
+1030:                   className="px-4 py-2 text-xs font-semibold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200"
+1031:                 >
+1032:                   Close
+1033:                 </button>
+1034:                 <Link
+1035:                   to="/patient"
+1036:                   className="px-4 py-2 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-xl shadow-xs"
+1037:                 >
+1038:                   View Patient Portal
+1039:                 </Link>
+1040:               </div>
+1041:             </motion.div>
+1042:           </div>
+1043:         )}
+1044:       </AnimatePresence>
+1045:     
+1046:       </div>
+1047:     </div>
+1048:   );
+1049: }

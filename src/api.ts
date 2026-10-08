@@ -7,6 +7,13 @@ const getHeaders = () => {
 };
 
 export const api = {
+  getExtraction: async (docId: number) => {
+    const response = await fetch("http://localhost:8000/api/doctor/extraction/" + docId, {
+      headers: { ...getHeaders() }
+    });
+    if (!response.ok) throw new Error("Failed");
+    return response.json();
+  },
     // Doctor Ops
     getDoctorStats: async () => {
         const res = await fetch('http://localhost:8000/api/doctor/stats', { headers: getHeaders() });
