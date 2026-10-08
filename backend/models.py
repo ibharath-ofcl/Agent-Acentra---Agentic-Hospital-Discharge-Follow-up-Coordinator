@@ -89,3 +89,14 @@ class NeedsReviewIssue(Base):
     status = Column(String) # active, resolved
 
     patient = relationship("Patient", back_populates="issues")
+
+class DischargeExtraction(Base):
+    __tablename__ = "discharge_extractions"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey("discharge_documents.id"))
+    patient_id = Column(String, ForeignKey("patients.id"), nullable=True)
+    structured_data = Column(String, nullable=True) # JSON string
+    needs_review = Column(Boolean, default=False)
+    
+    document = relationship("DischargeDocument")
+    patient = relationship("Patient")

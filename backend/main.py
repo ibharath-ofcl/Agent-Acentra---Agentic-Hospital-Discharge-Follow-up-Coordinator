@@ -9,6 +9,7 @@ import datetime
 
 import models
 import document_parser
+import extraction_service
 
 from database import engine, get_db, Base
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
@@ -215,14 +216,24 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
             id=f"TL_DOC_{document.id}",
             patient_id=matched_patient.id,
             date_str=datetime.datetime.utcnow().strftime("%d %b"),
-            title="Discharge Document Uploaded",
-            description=f"File '{file.filename}' processed and mapped successfully.",
+            title="Discharge Document Uploaded & Extracted",
+            description=f"File '{file.filename}' processed, mapped, and structured successfully.",
             status="completed",
             event_type="communication"
         )
         db.add(tl)
         db.commit()
-        return {"message": "success", "documentId": document.id, "needsReview": False, "patientName": matched_patient.name}
+        
+        # --- PHASE 3 STEP 2 HOOK ---
+        # Document successfully matches patient, now we attempt LLM extraction
+        ext_record, ext_reasons = extraction_service.process_document_extraction(db, text, document, matched_patient)
+        
+        if document.needs_review:
+             # It got flagged during extraction
+             return {"message": "Document flagged during extraction review.", "documentId": document.id, "needsReview": True, "reason": document.review_reason, "patientName": matched_patient.name}
+             
+        return {"message": "success", "documentId": document.id, "needsReview": False, "patientName": matched_patient.name, "extractionId": ext_record.id}
+
 
 # ======================= PATIENT DASHBOARD ENDPOINTS =======================
 
@@ -271,3 +282,12 @@ def patient_timeline(db: Session = Depends(get_db), current_user: models.User = 
         "status": e.status,
         "type": e.event_type
     } for e in events]
+
+@app.get("/api/doctor/extraction/{document_id}")
+async def get_extraction(document_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != 'doctor': raise HTTPException(status_code=403)
+    ext = db.query(models.DischargeExtraction).filter(models.DischargeExtraction.document_id == document_id).first()
+    if not ext:
+        raise HTTPException(status_code=404, detail="Extraction not found")
+    import json
+    return json.loads(ext.structured_data) if ext.structured_data else {}

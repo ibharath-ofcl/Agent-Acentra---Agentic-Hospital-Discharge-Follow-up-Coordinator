@@ -75,6 +75,7 @@ export function DoctorDashboard() {
   const [inspectedPatient, setInspectedPatient] = useState<Patient | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [extractedData, setExtractedData] = useState<any>(null);
   const handleUpload = async () => {
     if(!uploadFile) return;
     try {
@@ -128,6 +129,15 @@ export function DoctorDashboard() {
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesPriority && matchesStatus;
   });
+
+  
+  useEffect(() => {
+    if (uploadResult && !uploadResult.needsReview && uploadResult.documentId) {
+      api.getExtraction(uploadResult.documentId).then(data => setExtractedData(data)).catch(e => console.error(e));
+    } else {
+      setExtractedData(null);
+    }
+  }, [uploadResult]);
 
   return (
         <div className="flex bg-[#f8fafc] text-slate-900 min-h-screen">
@@ -858,6 +868,28 @@ export function DoctorDashboard() {
                 <div className="text-[11px] text-slate-500 mt-2 pl-2">Document ID: {uploadResult.documentId}</div>
               </div>
             )}
+            {extractedData && (
+              <div className="mt-6 border border-teal-200 rounded-xl overflow-hidden bg-white">
+                <div className="bg-teal-50 px-4 py-3 font-semibold text-teal-900 border-b border-teal-200">
+                  Document Intelligence Extraction
+                </div>
+                <div className="p-4 space-y-4 text-sm text-slate-700">
+                  <div className="flex gap-4">
+                    <div className="flex-1"><strong className="text-slate-900">MRN:</strong> {extractedData.patient_mrn}</div>
+                    <div className="flex-1"><strong className="text-slate-900">Discharge:</strong> {extractedData.discharge_date}</div>
+                  </div>
+                  {extractedData.source_evidence && extractedData.source_evidence.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <strong className="text-slate-500 block mb-1 text-xs uppercase tracking-wider">Source Evidence snippet:</strong>
+                      <div className="bg-slate-50 p-2 rounded text-xs italic text-slate-600 border border-slate-200">
+                        "{extractedData.source_evidence[0]?.extracted_text}"
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             
 
             <div className="mt-4 flex items-center gap-2 text-[11px] text-slate-600 bg-slate-100 p-3 rounded-lg border border-slate-200">
