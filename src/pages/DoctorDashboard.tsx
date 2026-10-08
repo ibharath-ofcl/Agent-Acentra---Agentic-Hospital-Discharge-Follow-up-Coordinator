@@ -109,11 +109,11 @@ export function DoctorDashboard() {
       if (match) {
         setSelectedReviewItem(match);
       } else {
-        const pt = demoPatients.find((p) => p.id === item.patientId);
+        const pt = priorityList.find((p) => p.id === item.patientId);
         if (pt) setInspectedPatient(pt);
       }
     } else {
-      const pt = demoPatients.find((p) => p.id === item.patientId);
+      const pt = priorityList.find((p) => p.id === item.patientId);
       if (pt) setInspectedPatient(pt);
     }
   };
@@ -766,16 +766,16 @@ export function DoctorDashboard() {
 
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
                 <div className="flex items-center justify-between font-bold text-slate-900">
-                  <span>{demoReminderSimulation.patientName}</span>
+                  <span>{(priorityList[0]?.patientName || 'Loading...')}</span>
                   <span className="text-[10px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                    {demoReminderSimulation.currentStatus}
+                    {('Upcoming')}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 mt-1">
-                  <strong>Scheduled:</strong> {demoReminderSimulation.scheduledTime}
+                  <strong>Scheduled:</strong> {('Today, 2:00 PM')}
                 </p>
                 <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                  <strong>Purpose:</strong> {demoReminderSimulation.purpose}
+                  <strong>Purpose:</strong> {('Post-discharge routine check')}
                 </p>
 
                 {/* Simulation Sequence */}

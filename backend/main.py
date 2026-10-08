@@ -94,6 +94,7 @@ def doctor_patients(db: Session = Depends(get_db), current_user: models.User = D
             "id": p.id,
             "patientId": p.id,
             "patientName": p.name,
+            "name": p.name,
             "followUp": next_task,
             "dueDate": due,
             "status": status,

@@ -1,12 +1,12 @@
 import React, { createContext, useState, useEffect } from 'react';
-import type { AuthState, AuthUser, LoginCredentials } from '../types';
+import type { AuthState, AuthUser, LoginResult } from '../types';
 
 interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (username: string, password: string) => Promise<LoginResult>;
   logout: () => void;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from "./authContextDef";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [auth, setAuth] = useState<AuthState>(() => {
@@ -25,16 +25,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { isAuthenticated: false, user: null, token: null };
   });
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (username: string, password: string): Promise<LoginResult> => {
     try {
       const response = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials)
+        body: JSON.stringify({ email: username, password })
       });
 
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        return { success: false, error: 'Invalid credentials' };
       }
 
       const data = await response.json();
@@ -47,12 +47,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setAuth({
         isAuthenticated: true,
-        user: { id: data.patient_id || '1', role: data.role, name: data.name, email: credentials.email },
+        user: { id: data.patient_id || '1', role: data.role, name: data.name, email: username },
         token: data.access_token
       });
-    } catch (e) {
+
+      return { success: true };
+    } catch (e: any) {
       console.error(e);
-      throw e;
+      return { success: false, error: e.message || 'An unexpected error occurred' };
     }
   };
 

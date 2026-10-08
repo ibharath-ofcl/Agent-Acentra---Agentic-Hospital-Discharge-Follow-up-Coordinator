@@ -14,7 +14,7 @@ import {
   Loader2,
   Info,
 } from 'lucide-react';
-import { useAuth, DEMO_CREDENTIALS } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth';
 import type { UserRole } from '../types';
 
 export function LoginPage() {
@@ -28,8 +28,8 @@ export function LoginPage() {
     redirectedFrom === '/doctor' ? 'doctor' : 'patient';
 
   const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
-  const [username, setUsername] = useState(DEMO_CREDENTIALS[initialRole].username);
-  const [password, setPassword] = useState(DEMO_CREDENTIALS[initialRole].password);
+  const [username, setUsername] = useState(initialRole === 'doctor' ? 'doctor@acentra.com' : 'patient@acentra.com');
+  const [password, setPassword] = useState('password');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -39,11 +39,11 @@ export function LoginPage() {
     setSelectedRole(role);
     setErrorMessage(null);
     if (role === 'patient') {
-      setUsername(DEMO_CREDENTIALS.patient.username);
-      setPassword(DEMO_CREDENTIALS.patient.password);
+      setUsername('patient@acentra.com');
+      setPassword('password');
     } else {
-      setUsername(DEMO_CREDENTIALS.doctor.username);
-      setPassword(DEMO_CREDENTIALS.doctor.password);
+      setUsername('doctor@acentra.com');
+      setPassword('password');
     }
   };
 

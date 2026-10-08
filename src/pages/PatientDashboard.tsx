@@ -297,15 +297,15 @@ export function PatientDashboard() {
               <div className="space-y-4 text-sm">
                 <div>
                   <span className="text-slate-500 block mb-1">Primary Diagnosis</span>
-                  <strong className="text-slate-900">{(profile).primaryDiagnosis}</strong>
+                  <strong className="text-slate-900">{(profile || {})?.primaryDiagnosis}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Attending Physician</span>
-                  <strong className="text-slate-900">{(profile).attendingPhysician}</strong>
+                  <strong className="text-slate-900">{(profile || {})?.attendingPhysician}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Discharge Date</span>
-                  <strong className="text-slate-900">{(profile).dischargeDate}</strong>
+                  <strong className="text-slate-900">{(profile || {})?.dischargeDate}</strong>
                 </div>
               </div>
             </div>
@@ -322,7 +322,7 @@ export function PatientDashboard() {
                     <span className="text-xs font-bold uppercase tracking-wider text-[#052429] bg-[#e6fcf1] border border-[#a7f3d0] px-2.5 py-0.5 rounded-full">
                       Post-Discharge Recovery Plan
                     </span>
-                    <span className="text-xs text-slate-500 font-mono">Discharged: {(profile).dischargeDate}</span>
+                    <span className="text-xs text-slate-500 font-mono">Discharged: {(profile || {})?.dischargeDate}</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mt-2">
                     Good morning, Arun
@@ -334,8 +334,8 @@ export function PatientDashboard() {
 
                 {/* Quick hospital record summary */}
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-                  <div><strong className="text-slate-800">Primary Diagnosis:</strong> {(profile).primaryDiagnosis}</div>
-                  <div><strong className="text-slate-800">Attending Physician:</strong> {(profile).attendingPhysician}</div>
+                  <div><strong className="text-slate-800">Primary Diagnosis:</strong> {(profile || {})?.primaryDiagnosis}</div>
+                  <div><strong className="text-slate-800">Attending Physician:</strong> {(profile || {})?.attendingPhysician}</div>
                 </div>
               </div>
             </div>
