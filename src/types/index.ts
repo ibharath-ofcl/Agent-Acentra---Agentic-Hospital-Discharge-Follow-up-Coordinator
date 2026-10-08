@@ -235,3 +235,43 @@ export interface NeedsReviewItem {
   flagReason: string;
 }
 
+export interface AuthUser {
+  username: string;
+  role: UserRole;
+  name: string;
+}
+
+export interface AuthState {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+}
+
+export interface LoginResult {
+  success: boolean;
+  error?: string;
+  role?: UserRole;
+}
+
+export interface AuthContextType {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => Promise<LoginResult>;
+  logout: () => void;
+}
+
+export const DEMO_CREDENTIALS = {
+  patient: {
+    username: 'patient',
+    password: 'patient123',
+    role: 'patient' as UserRole,
+    name: 'Arun Kumar',
+  },
+  doctor: {
+    username: 'doctor',
+    password: 'doctor123',
+    role: 'doctor' as UserRole,
+    name: 'Dr. Meera Patel',
+  },
+};
+
+
