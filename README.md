@@ -51,3 +51,11 @@ The application now requires the backend to be running to serve synthetic databa
 CareFlow AI operates strictly within operational and administrative bounds. 
 * **Zero Diagnostic Capabilities**: The system extracts structured dates and follow-up timelines but **never** infers diagnoses. 
 * **Mandatory Human Verification**: AI-identified data discrepancies explicitly flag documents as **"Needs Manual Review"**, halting further processing until user confirmation.
+
+
+## Phase 3: Real Document Intelligence
+### Step 1: Ingestion & Validation Layer
+- Implemented native parsing for `.docx`, `.xlsx`, and `.pdf` inside `backend/document_parser.py` using standard libraries to extract plain text footprints.
+- Integrated strict patient validation logic prioritizing zero-hallucination policies. Files are uploaded via `POST /api/doctor/upload`.
+- Files containing strict identifiable MRNs are mapped directly (storing a `DischargeDocument` reference and generating a `TimelineEvent`).
+- **Missing** or **Ambiguous** files immediately flag the workflow, returning a `Needs Human Review` boolean to the UI which renders clear diagnostic warnings.

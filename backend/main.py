@@ -8,6 +8,8 @@ import shutil
 import datetime
 
 import models
+import document_parser
+
 from database import engine, get_db, Base
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
 from pydantic import BaseModel
@@ -156,23 +158,71 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    # Validate extension
     ext = file.filename.split('.')[-1].lower()
     if ext not in ['pdf', 'doc', 'docx', 'xls', 'xlsx']:
         raise HTTPException(status_code=400, detail="Unsupported file format")
         
+    text = document_parser.extract_text(file_path, ext)
+    mrns = document_parser.find_patient_mrns(text)
+    
+    needs_review = False
+    review_reason = None
+    matched_patient = None
+    
+    if len(mrns) == 0:
+        needs_review = True
+        review_reason = "Missing patient identifier. No MRN found in document."
+    elif len(mrns) > 1:
+        needs_review = True
+        review_reason = f"Ambiguous/conflicting patient information. Found multiple identifiers: {', '.join(mrns)}."
+    else:
+        mrn = mrns[0]
+        matched_patient = db.query(models.Patient).filter(func.upper(models.Patient.id) == mrn).first()
+        if not matched_patient:
+            needs_review = True
+            review_reason = f"Unknown patient identifier: {mrn}."
+            
     document = models.DischargeDocument(
+        patient_id=matched_patient.id if matched_patient else None,
         original_filename=file.filename,
         file_path=file_path,
-        status="needs-manual-review",
-        needs_review=True,
-        review_reason="Patient identifier could not be confidently matched."
+        status="needs-manual-review" if needs_review else "processed",
+        needs_review=needs_review,
+        review_reason=review_reason
     )
     db.add(document)
     db.commit()
     db.refresh(document)
     
-    return {"message": "Document uploaded and flagged for review.", "documentId": document.id}
+    if needs_review:
+        issue = models.NeedsReviewIssue(
+            id=f"NR_DOC_{document.id}",
+            patient_id=None,
+            document_id=document.id,
+            category="patient-matching",
+            issue="Document ingestion failed confident patient matching.",
+            extracted_text=",".join(mrns) if mrns else "No MRN found",
+            flag_reason=review_reason,
+            source=file.filename,
+            page=1,
+            status="active"
+        )
+        db.add(issue)
+        db.commit()
+        return {"message": "Document uploaded and flagged for review.", "documentId": document.id, "needsReview": True, "reason": review_reason, "patientName": None}
+    else:
+        tl = models.TimelineEvent(
+            id=f"TL_DOC_{document.id}",
+            patient_id=matched_patient.id,
+            date_str=datetime.datetime.utcnow().strftime("%d %b"),
+            title="Discharge Document Uploaded",
+            description=f"File '{file.filename}' processed and mapped successfully.",
+            status="completed",
+            event_type="communication"
+        )
+        db.add(tl)
+        db.commit()
+        return {"message": "success", "documentId": document.id, "needsReview": False, "patientName": matched_patient.name}
 
 # ======================= PATIENT DASHBOARD ENDPOINTS =======================
 
