@@ -20,7 +20,7 @@ The application now requires the backend to be running to serve synthetic databa
    pip install fastapi uvicorn sqlalchemy pydantic python-multipart passlib bcrypt python-jose[cryptography] python-dotenv
    ```
 2. **Seed the Relational Database**:
-   This script creates the DB schema automatically and populates exactly **15 unique 100% synthetic patients**, complete with tasks and timeline milestones. None of this data is hardcoded in the frontend. 
+   This script creates the DB schema automatically (patients: 15 rows, users: 16 rows, followup_tasks: 71 rows, timeline_events: 71 rows, needs_review_issues: 11 rows) and populates exactly **15 unique 100% synthetic patients**, complete with tasks and timeline milestones. None of this data is hardcoded in the frontend. 
    ```bash
    python seed.py
    ```
