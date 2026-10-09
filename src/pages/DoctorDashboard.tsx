@@ -1,37 +1,72 @@
-import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Users, ClockAlert, AlertTriangle, CheckCircle2, Search, Check, LogOut, ShieldCheck, User, PhoneCall, X, Calendar, ArrowRight, Clock, UserCheck, Menu, UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History, BellRing, HelpCircle, FileText } from 'lucide-react';
+import {
+  Activity, Users, ClockAlert, AlertTriangle, CheckCircle2, Search, Check, LogOut,
+  ShieldCheck, User, PhoneCall, X, Calendar, ArrowRight, Clock, UserCheck, Menu,
+  UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History,
+  BellRing, HelpCircle, Sparkles, Brain, Stethoscope, Pill, AlertOctagon,
+  CheckSquare, Eye, Send, ChevronRight, CheckCheck, Info, FileSearch,
+  HeartPulse, FileCheck, Layers, ClipboardCheck, ArrowUpRight, Copy
+} from 'lucide-react';
 import {
   StatusBadge,
   CareCoordinationPriorityBadge,
 } from '../components/common/StatusBadge';
+import { DischargeIntelligenceView } from '../components/ai/DischargeIntelligenceView';
 import { useAuth } from '../hooks/useAuth';
+import { doctorService } from '../services/api/doctorService';
+import { geminiService } from '../services/ai/geminiService';
+import { useSearchParams } from 'react-router-dom';
 import type {
   CareCoordinationPriorityItem,
   NeedsReviewItem,
   Patient,
-  CareCoordinationPriorityLevel,
+  CareCoordinationPriorityLevel
 } from '../types';
 
-export function DoctorDashboard() {
+interface DoctorDashboardProps {
+  defaultTab?: string;
+}
+
+export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
 
   // Navigation tab state
-  const [activeNav, setActiveNav] = useState('dashboard');
+  const [activeNav, setActiveNav] = useState(defaultTab || tabParam || 'dashboard');
+
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveNav(defaultTab);
+    } else if (tabParam) {
+      setActiveNav(tabParam);
+    }
+  }, [defaultTab, tabParam]);
 
   const sidebarNav = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'patients', label: 'Patients', icon: Users },
-    { id: 'upload', label: 'Document Upload', icon: UploadCloud },
-    { id: 'followup', label: 'Follow-up Tasks', icon: ListTodo },
-    { id: 'review', label: 'Needs Human Review', icon: AlertTriangle },
-    { id: 'priority', label: 'Priority Queue', icon: ClockAlert },
-    { id: 'reminders', label: 'Reminders', icon: PhoneCall },
-    { id: 'timeline', label: 'Timeline / Audit', icon: Clock },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/doctor' },
+    { id: 'followup', label: 'My Follow-ups', icon: ListTodo, path: '/doctor/follow-ups', badge: '7' },
+    { id: 'tasks', label: 'Upcoming Tasks', icon: CalendarClock, path: '/doctor/tasks', badge: '4' },
+    { id: 'instructions', label: 'Care Instructions', icon: ClipboardList, path: '/doctor/care-instructions' },
+    { id: 'upload', label: 'Discharge Intelligence', icon: Sparkles, tab: 'upload' },
+    { id: 'patients', label: 'Patients', icon: Users, tab: 'patients' },
+    { id: 'review', label: 'Needs Human Review', icon: AlertTriangle, tab: 'review', badge: '4' },
+    { id: 'priority', label: 'Priority Queue', icon: ClockAlert, tab: 'priority' },
+    { id: 'reminders', label: 'Reminders & Calls', icon: PhoneCall, tab: 'reminders' },
+    { id: 'timeline', label: 'Timeline / Audit', icon: Clock, tab: 'timeline' },
   ];
+
+  const handleNavClick = (item: typeof sidebarNav[0]) => {
+    if (item.path) {
+      navigate(item.path);
+    } else if (item.tab) {
+      setActiveNav(item.tab);
+      setSearchParams({ tab: item.tab });
+    }
+  };
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -40,29 +75,36 @@ export function DoctorDashboard() {
   const [reviewQueue, setReviewQueue] = useState<any[]>([]);
   const [overdueItems, setOverdueItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [aiStatus, setAiStatus] = useState<any>(null);
+
   useEffect(() => {
+    let isMounted = true;
     async function loadData() {
       try {
-        const [s, p, r, o] = await Promise.all([
-          api.getDoctorStats(),
-          api.getDoctorPatients(),
-          api.getNeedsReview(),
-          api.getOverdue()
+        const [s, p, r, o, ai] = await Promise.all([
+          doctorService.getStats(),
+          doctorService.getPatients(),
+          doctorService.getNeedsReview(),
+          doctorService.getOverdue(),
+          geminiService.getAiStatus()
         ]);
+        if (!isMounted) return;
         if (s && typeof s === 'object') setStats(s);
         setPriorityList(Array.isArray(p) ? p : []);
         setReviewQueue(Array.isArray(r) ? r : []);
         setOverdueItems(Array.isArray(o) ? o : []);
-      } catch(e) {
+        if (ai) setAiStatus(ai);
+      } catch (e) {
         console.error(e);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
     loadData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
-
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,41 +112,44 @@ export function DoctorDashboard() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'needs-review' | 'overdue'>('all');
 
   // Interactive local states for demo actions
-  
-  
   const [inspectedPatient, setInspectedPatient] = useState<Patient | null>(null);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadResult, setUploadResult] = useState<any>(null);
-  const [extractedData, setExtractedData] = useState<any>(null);
-  const handleUpload = async () => {
-    if(!uploadFile) return;
-    try {
-      setToastMessage("Uploading document...");
-      const res = await api.uploadDoc(uploadFile);
-      setUploadResult(res); setToastMessage("Document uploaded successfully.");
-      setUploadFile(null);
-    } catch(e) {
-      setToastMessage("Upload failed.");
-    }
-  };
-
   const [selectedReviewItem, setSelectedReviewItem] = useState<NeedsReviewItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const handleLogout = () => {
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  }, []);
+
+  const handleLogout = useCallback(() => {
     logout();
     navigate('/login');
-  };
+  }, [logout, navigate]);
+
+  // Memoized filter for patient priority table
+  const filteredPriorityList = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return priorityList.filter((item) => {
+      if (!item) return false;
+      const pName = (item.patientName || item.name || '').toLowerCase();
+      const fUp = (item.followUp || '').toLowerCase();
+      const rsn = (item.reason || item.primaryDiagnosis || '').toLowerCase();
+
+      const matchesSearch = !query || pName.includes(query) || fUp.includes(query) || rsn.includes(query);
+      const matchesPriority = priorityFilter === 'all' || item.level === priorityFilter;
+      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+      return matchesSearch && matchesPriority && matchesStatus;
+    });
+  }, [priorityList, searchQuery, priorityFilter, statusFilter]);
 
   // Interactive handler for "Review Now" or "Approve"
-  const handleResolveReviewItem = (id: string, issue: string) => {
+  const handleResolveReviewItem = useCallback((id: string, issue: string) => {
     setReviewQueue((prev) => prev.filter((item) => item.id !== id));
     setSelectedReviewItem(null);
-    setToastMessage(`Clinician approved: "${issue}" resolved & updated`);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
+    showToast(`Clinician approved: "${issue}" resolved & updated`);
+  }, [showToast]);
 
-  const handlePriorityAction = (item: CareCoordinationPriorityItem) => {
+  const handlePriorityAction = useCallback((item: CareCoordinationPriorityItem) => {
     if (item.level === 'immediate-review') {
       const match = reviewQueue.find((r) => r.patientId === item.patientId);
       if (match) {
@@ -117,27 +162,8 @@ export function DoctorDashboard() {
       const pt = priorityList.find((p) => p.id === item.patientId);
       if (pt) setInspectedPatient(pt);
     }
-  };
+  }, [reviewQueue, priorityList]);
 
-  // Filtered priority list for Patient Queue Table
-  const filteredPriorityList = priorityList.filter((item) => {
-    const matchesSearch =
-      item.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.followUp.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.reason.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPriority = priorityFilter === 'all' || item.level === priorityFilter;
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    return matchesSearch && matchesPriority && matchesStatus;
-  });
-
-  
-  useEffect(() => {
-    if (uploadResult && !uploadResult.needsReview && uploadResult.documentId) {
-      api.getExtraction(uploadResult.documentId).then(data => setExtractedData(data)).catch(e => console.error(e));
-    } else {
-      setExtractedData(null);
-    }
-  }, [uploadResult]);
 
   return (
         <div className="flex bg-[#f8fafc] text-slate-900 min-h-screen">
@@ -178,15 +204,26 @@ export function DoctorDashboard() {
           {sidebarNav.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveNav(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
+              onClick={() => handleNavClick(item)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors cursor-pointer ${
                 activeNav === item.id
-                  ? 'bg-[#00e575] text-[#052429]'
+                  ? 'bg-[#00e575] text-[#052429] font-bold'
                   : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
               }`}
             >
-              <item.icon className="w-4 h-4 shrink-0" />
-              {item.label}
+              <div className="flex items-center gap-3">
+                <item.icon className="w-4 h-4 shrink-0" />
+                <span>{item.label}</span>
+              </div>
+              {item.badge && (
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  activeNav === item.id
+                    ? 'bg-[#052429] text-[#00e575]'
+                    : 'bg-[#0e4851] text-teal-300'
+                }`}>
+                  {item.badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -224,6 +261,7 @@ export function DoctorDashboard() {
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="p-1.5 -ml-1.5 text-slate-300 hover:text-white rounded-lg focus:outline-none"
+              aria-label="Open mobile menu"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -236,7 +274,7 @@ export function DoctorDashboard() {
               </span>
             </Link>
           </div>
-          <button onClick={handleLogout} className="p-1.5 text-slate-300 hover:text-red-400">
+          <button onClick={handleLogout} className="p-1.5 text-slate-300 hover:text-red-400" aria-label="Sign out">
             <LogOut className="w-5 h-5" />
           </button>
         </header>
@@ -261,7 +299,7 @@ export function DoctorDashboard() {
               >
                 <div className="h-16 flex items-center justify-between px-5 border-b border-[#0e4851]">
                   <span className="font-bold text-base tracking-tight text-white">Menu</span>
-                  <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 text-slate-300 hover:text-white">
+                  <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 text-slate-300 hover:text-white" aria-label="Close menu">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -269,15 +307,22 @@ export function DoctorDashboard() {
                   {sidebarNav.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => { setActiveNav(item.id); setMobileMenuOpen(false) }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
+                      onClick={() => { handleNavClick(item); setMobileMenuOpen(false); }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
                         activeNav === item.id
-                          ? 'bg-[#00e575] text-[#052429]'
+                          ? 'bg-[#00e575] text-[#052429] font-bold'
                           : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
                       }`}
                     >
-                      <item.icon className="w-4 h-4 shrink-0" />
-                      {item.label}
+                      <div className="flex items-center gap-3">
+                        <item.icon className="w-4 h-4 shrink-0" />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-[#0e4851] text-teal-300">
+                          {item.badge}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </nav>
@@ -814,68 +859,13 @@ export function DoctorDashboard() {
         </div>
         )}
       
-        {(activeNav === 'upload') && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-3xl mx-auto mt-8">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-              <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-200">
-                <UploadCloud className="w-5 h-5 text-teal-800" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Upload Clinical Document</h2>
-                <p className="text-xs text-slate-500">Securely ingest Discharge Summaries for AI Extraction</p>
-              </div>
-            </div>
-            
-            <label className="border-2 border-dashed border-slate-300 rounded-xl p-10 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
-              <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => {
-                 if(e.target.files && e.target.files[0]) setUploadFile(e.target.files[0]);
-              }} />
-              <div className="w-16 h-16 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-4 group-hover:shadow-md transition-shadow">
-                <FileText className="w-8 h-8 text-slate-400 group-hover:text-teal-600 transition-colors" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900 mb-1">{uploadFile ? uploadFile.name : "Click to select or drag and drop"}</h3>
-              <p className="text-xs text-slate-500 mb-4">Supported formats: PDF, DOCX, XLS, XLSX</p>
-              <div className="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-lg shadow-xs transition-colors">
-                {uploadFile ? "Change File" : "Select File"}
-              </div>
-            </label>
-            {uploadFile && (
-              <button onClick={handleUpload} className="mt-4 w-full py-3 bg-[#00e575] hover:bg-[#00cb68] text-[#052429] font-bold rounded-xl shadow-md transition-colors">
-                Confirm & Upload Document
-              </button>
-            )}
-            
-            {uploadResult && uploadResult.needsReview && (
-              <div className="mt-6 bg-red-50/80 border border-red-300 rounded-xl p-4 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-red-900 font-bold text-sm">
-                  <AlertTriangle className="w-5 h-5 text-red-600" /> ⚠ Needs Manual Correction
-                </div>
-                <div className="text-xs text-red-800 font-medium pl-2">
-                  <strong className="block mb-1">Reason:</strong>
-                  {uploadResult.reason || "Patient identifier could not be confidently matched."}
-                </div>
-                <div className="text-[11px] text-slate-500 mt-2 pl-2">Document ID: {uploadResult.documentId}</div>
-              </div>
-            )}
-            {uploadResult && !uploadResult.needsReview && (
-              <div className="mt-6 bg-emerald-50 border border-emerald-300 rounded-xl p-4 flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Document Mapped Structure
-                </div>
-                <div className="text-xs text-emerald-800 font-medium pl-2">
-                  Successfully mapped to Patient: <strong>{uploadResult.patientName}</strong>
-                </div>
-                <div className="text-[11px] text-slate-500 mt-2 pl-2">Document ID: {uploadResult.documentId}</div>
-              </div>
-            )}
-            
-
-            <div className="mt-4 flex items-center gap-2 text-[11px] text-slate-600 bg-slate-100 p-3 rounded-lg border border-slate-200">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <p>This is a frontend demonstration interface. Uploaded documents will not be sent to any backend AI processing engine during Phase 1.</p>
-            </div>
-          </div>
+        {activeNav === 'upload' && (
+          <DischargeIntelligenceView
+            onShowToast={showToast}
+            aiStatus={aiStatus}
+          />
         )}
+
 
         </main>
 {/* Review Modal (for resolving Needs Human Review queue items) */}

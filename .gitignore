@@ -32,3 +32,5 @@ backend/venv/
 **/__pycache__/
 *.pyc
 *.db
+uploads/
+backend/uploads/

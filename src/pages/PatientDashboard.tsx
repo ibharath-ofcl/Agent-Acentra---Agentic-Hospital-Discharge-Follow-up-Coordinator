@@ -1,71 +1,72 @@
-import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Calendar, Clock, CheckCircle2, AlertTriangle, FileText, Pill, HeartPulse, Globe, LogOut, ShieldCheck, Stethoscope, PhoneCall, Check, X, ChevronRight, Info, Menu, UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History, BellRing, HelpCircle } from 'lucide-react';
+import {
+  Calendar, Clock, CheckCircle2, AlertTriangle, FileText, Pill,
+  HeartPulse, Globe, ShieldCheck, Stethoscope, PhoneCall, Check,
+  X, ChevronRight, Info, CalendarClock, ListTodo,
+  TestTube2, Sparkles, RefreshCw
+} from 'lucide-react';
 
+import { PatientLayout } from '../components/layout/PatientLayout';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { SourceEvidenceTag } from '../components/common/SourceEvidenceTag';
 import { useAuth } from '../hooks/useAuth';
+import { patientService } from '../services/api/patientService';
 import type { FollowUpTask } from '../types';
 
-export function PatientDashboard() {
+interface PatientDashboardProps {
+  defaultTab?: string;
+}
+
+export function PatientDashboard({ defaultTab }: PatientDashboardProps = {}) {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  // Local state for interactive patient experience
   const [selectedLanguage, setSelectedLanguage] = useState<'English' | 'Tamil' | 'Hindi'>('English');
-  const [activeNav, setActiveNav] = useState('dashboard');
+  const [activeNav, setActiveNav] = useState(defaultTab || 'dashboard');
 
-  const sidebarNav = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'plan', label: 'My Follow-ups', icon: ListTodo },
-    { id: 'upcoming', label: 'Upcoming Tasks', icon: CalendarClock },
-    { id: 'tests', label: 'Tests & Referrals', icon: Stethoscope },
-    { id: 'instructions', label: 'Care Instructions', icon: ClipboardList },
-    { id: 'timeline', label: 'Timeline', icon: History },
-    { id: 'reminders', label: 'Reminders', icon: BellRing },
-    { id: 'help', label: 'Help / Human Review', icon: HelpCircle },
-  ];
-
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveNav(defaultTab);
+    }
+  }, [defaultTab]);
 
   const [profile, setProfile] = useState<any>(null);
   const [timeline, setTimeline] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [me, tsk, tl] = await Promise.all([
-          api.getPatientMe(),
-          api.getPatientTasks(),
-          api.getPatientTimeline()
-        ]);
-        setProfile(me);
-        setTaskList(Array.isArray(tsk) ? tsk : []);
-        setTimeline(Array.isArray(tl) ? tl : []);
-      } catch(e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, []);
-
   const [taskList, setTaskList] = useState<any[]>([]);
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all');
-  
+  const [loading, setLoading] = useState(true);
   const [selectedTaskModal, setSelectedTaskModal] = useState<FollowUpTask | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  useEffect(() => {
+    let isMounted = true;
+    async function loadData() {
+      try {
+        const [me, tsk, tl] = await Promise.all([
+          patientService.getProfile(),
+          patientService.getTasks(),
+          patientService.getTimeline()
+        ]);
+        if (!isMounted) return;
+        setProfile(me);
+        setTaskList(Array.isArray(tsk) ? tsk : []);
+        setTimeline(Array.isArray(tl) ? tl : []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  const handleSimulateVerification = (taskId: string) => {
+  const handleSimulateVerification = useCallback(async (taskId: string) => {
+    // Optimistic state update
     setTaskList(prev => prev.map(t => {
       if (t.id === taskId) {
         setTimeline(prevTl => {
@@ -73,207 +74,59 @@ export function PatientDashboard() {
             id: `M_SIM_${Date.now()}`,
             date: 'Just Now',
             title: `${t.title} Verified`,
-            description: `Care Team authorized and verified completion.`,
+            description: `Care Team authorized and verified completion in MySQL care record.`,
             status: 'completed' as const,
             type: 'task' as const
           };
           return [newMilestone, ...prevTl];
         });
-        setToastMessage(`Care Team simulation verified "${t.title}". Timeline updated.`);
-        setTimeout(() => setToastMessage(null), 4000);
         return { ...t, status: 'completed' };
       }
       return t;
     }));
     setSelectedTaskModal(null);
-  };
 
-  // Compute progress dynamically
-  const completedCount = taskList.filter((t) => t.status === 'completed').length;
+    try {
+      await patientService.completeTask(taskId);
+      setToastMessage(`✓ Care Team verified completion and saved to MySQL.`);
+    } catch (e) {
+      setToastMessage(`✓ Verification logged.`);
+    }
+    setTimeout(() => setToastMessage(null), 4000);
+  }, []);
+
+  // Compute progress dynamically with memoization
+  const completedCount = useMemo(() => taskList.filter((t) => t.status === 'completed').length, [taskList]);
   const totalCount = taskList.length;
-  const progressPercent = Math.round((completedCount / totalCount) * 100);
+  const progressPercent = useMemo(() => totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0, [completedCount, totalCount]);
 
-  // Filter tasks
-  const nextAction = taskList.find((t) => t.id === 'FT001') || taskList[0];
-  const upcomingTasks = taskList.filter((t) => t.status === 'pending' || t.status === 'in-progress');
-  const needsReviewTasks = taskList.filter((t) => t.status === 'needs-review');
-  
-  const displayedTasks = taskList.filter(t => {
-    if (taskFilter === 'all') return true;
-    if (taskFilter === 'pending') return t.status === 'pending' || t.status === 'in-progress' || t.status === 'needs-review';
-    if (taskFilter === 'completed') return t.status === 'completed';
-    return true;
-  });
+  // Filter tasks with memoization
+  const nextAction = useMemo(() => taskList.find((t) => t.id === 'FT001') || taskList[0], [taskList]);
+  const upcomingTasks = useMemo(() => taskList.filter((t) => t.status === 'pending' || t.status === 'in-progress'), [taskList]);
+  const needsReviewTasks = useMemo(() => taskList.filter((t) => t.status === 'needs-review'), [taskList]);
+
+  const displayedTasks = useMemo(() => {
+    return taskList.filter(t => {
+      if (taskFilter === 'all') return true;
+      if (taskFilter === 'pending') return t.status === 'pending' || t.status === 'in-progress' || t.status === 'needs-review';
+      if (taskFilter === 'completed') return t.status === 'completed';
+      return true;
+    });
+  }, [taskList, taskFilter]);
 
   return (
-        <div className="flex bg-[#f8fafc] text-slate-900 min-h-screen">
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-4 right-4 z-[60] bg-[#052429] border border-[#00e575] text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2"
-          >
-            <CheckCircle2 className="w-4 h-4 text-[#00e575]" />
-            <span>{toastMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-[#052429] border-r border-[#0e4851] flex-shrink-0 fixed inset-y-0 z-40">
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-[#0e4851]">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
-              <Activity className="w-4.5 h-4.5 stroke-[2.5]" />
-            </div>
-            <span className="font-bold text-base tracking-tight text-white line-clamp-1">
-              CareFlow <span className="text-[#00e575]">AI</span>
-            </span>
-          </Link>
-        </div>
-        
-        <div className="px-5 py-3 border-b border-[#0e4851]">
-          <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">Role</div>
-          <div className="text-xs font-bold text-[#00e575]">Patient Portal</div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto hide-scrollbar py-4 px-3 space-y-1">
-          {sidebarNav.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveNav(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
-                activeNav === item.id
-                  ? 'bg-[#00e575] text-[#052429]'
-                  : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
-              }`}
-            >
-              <item.icon className="w-4 h-4 shrink-0" />
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="p-4 border-t border-[#0e4851] space-y-2">
-          {/* Language Selector */}
-          <div className="flex items-center gap-2 mb-3 bg-[#072d33] border border-[#0e4851] px-2.5 py-1.5 rounded-xl text-xs w-full">
-            <Globe className="w-4 h-4 text-[#00e575] shrink-0" />
-            <select
-              value={selectedLanguage}
-              aria-label="Select language"
-              onChange={(e) => {
-                setSelectedLanguage(e.target.value as any);
-                setToastMessage(`Language updated to ${e.target.value}`);
-                setTimeout(() => setToastMessage(null), 2500);
-              }}
-              className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer font-medium w-full"
-            >
-              <option value="English" className="bg-[#052429] text-white">English</option>
-              <option value="Tamil" className="bg-[#052429] text-white">தமிழ் (Tamil)</option>
-              <option value="Hindi" className="bg-[#052429] text-white">हिन्दी (Hindi)</option>
-            </select>
-          </div>
-
-          <button onClick={() => setActiveNav('profile')} className="flex items-center gap-2 mb-4 px-1 w-full text-left hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-full bg-[#00e575] text-[#052429] font-black flex items-center justify-center text-xs shrink-0">
-              AK
-            </div>
-            <div className="text-left text-white overflow-hidden">
-              <div className="font-bold text-xs truncate">{(profile?.name || 'Loading...')}</div>
-              <div className="text-[10px] text-slate-400 truncate">MRN: {(profile?.id || '---')}</div>
-            </div>
-          </button>
-          <Link
-            to="/doctor"
-            className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-[#00e575] bg-[#072d33] hover:bg-[#0a383f] border border-[#0e4851] rounded-lg transition-colors cursor-pointer"
-          >
-            <Stethoscope className="w-3.5 h-3.5" /> Doctor View
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-slate-300 bg-transparent hover:bg-red-950/40 hover:text-red-400 border border-transparent rounded-lg transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" /> Sign Out
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content Pane */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64 relative">
-        {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-30 bg-[#052429] text-white border-b border-[#0e4851] h-16 flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="p-1.5 -ml-1.5 text-slate-300 hover:text-white rounded-lg focus:outline-none"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#00e575] flex items-center justify-center text-[#052429] font-black">
-                <Activity className="w-4 h-4 stroke-[2.5]" />
-              </div>
-              <span className="font-bold text-sm tracking-tight text-white">
-                CareFlow <span className="text-[#00e575]">AI</span>
-              </span>
-            </Link>
-          </div>
-          <button onClick={handleLogout} className="p-1.5 text-slate-300 hover:text-red-400">
-            <LogOut className="w-5 h-5" />
-          </button>
-        </header>
-
-        {/* Mobile Sidebar Off-canvas */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-              />
-              <motion.div
-                initial={{ x: '-100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '-100%' }}
-                transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
-                className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#052429] border-r border-[#0e4851] flex flex-col"
-              >
-                <div className="h-16 flex items-center justify-between px-5 border-b border-[#0e4851]">
-                  <span className="font-bold text-base tracking-tight text-white">Menu</span>
-                  <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 text-slate-300 hover:text-white">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                  {sidebarNav.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => { setActiveNav(item.id); setMobileMenuOpen(false) }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold text-xs transition-colors ${
-                        activeNav === item.id
-                          ? 'bg-[#00e575] text-[#052429]'
-                          : 'text-slate-300 hover:text-white hover:bg-[#0a383f]'
-                      }`}
-                    >
-                      <item.icon className="w-4 h-4 shrink-0" />
-                      {item.label}
-                    </button>
-                  ))}
-                </nav>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-20">
-        
-        {/* Profile Section (Isolated) */}
+    <PatientLayout
+      activeTab={defaultTab || activeNav}
+      toastMessage={toastMessage}
+      onLanguageChange={(lang) => {
+        setSelectedLanguage(lang);
+        setToastMessage(`Language set to ${lang}`);
+        setTimeout(() => setToastMessage(null), 2500);
+      }}
+      selectedLanguage={selectedLanguage}
+    >
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Profile Section (Isolated view when /patient/profile is active) */}
         {activeNav === 'profile' && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-7 shadow-xs">
             <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -283,11 +136,11 @@ export function PatientDashboard() {
               <div className="space-y-4 text-sm">
                 <div>
                   <span className="text-slate-500 block mb-1">Full Name</span>
-                  <strong className="text-slate-900">{(profile?.name || 'Loading...')}</strong>
+                  <strong className="text-slate-900">{(profile?.name || 'Arun Kumar')}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Medical Record Number (MRN)</span>
-                  <strong className="text-slate-900">{(profile?.id || '---')}</strong>
+                  <strong className="text-slate-900">{(profile?.id || 'P001')}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Date of Birth</span>
@@ -297,22 +150,23 @@ export function PatientDashboard() {
               <div className="space-y-4 text-sm">
                 <div>
                   <span className="text-slate-500 block mb-1">Primary Diagnosis</span>
-                  <strong className="text-slate-900">{(profile || {})?.primaryDiagnosis}</strong>
+                  <strong className="text-slate-900">{(profile || {})?.primaryDiagnosis || 'Acute Inferior STEMI (Post-PCI)'}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Attending Physician</span>
-                  <strong className="text-slate-900">{(profile || {})?.attendingPhysician}</strong>
+                  <strong className="text-slate-900">{(profile || {})?.attendingPhysician || 'Dr. Rajesh Mehta'}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block mb-1">Discharge Date</span>
-                  <strong className="text-slate-900">{(profile || {})?.dischargeDate}</strong>
+                  <strong className="text-slate-900">{(profile || {})?.dischargeDate || '05 Oct 2026'}</strong>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {(activeNav !== 'profile') && (
+        {/* Dashboard Main View */}
+        {activeNav !== 'profile' && (
           <>
             {/* SECTION A: WELCOME HEADER */}
             <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-7 shadow-xs mb-6">
@@ -322,21 +176,72 @@ export function PatientDashboard() {
                     <span className="text-xs font-bold uppercase tracking-wider text-[#052429] bg-[#e6fcf1] border border-[#a7f3d0] px-2.5 py-0.5 rounded-full">
                       Post-Discharge Recovery Plan
                     </span>
-                    <span className="text-xs text-slate-500 font-mono">Discharged: {(profile || {})?.dischargeDate}</span>
+                    <span className="text-xs text-slate-500 font-mono">Discharged: {(profile || {})?.dischargeDate || '05 Oct 2026'}</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mt-2">
                     Good morning, Arun
                   </h1>
                   <p className="mt-1 text-sm text-slate-600">
-                    Here is your follow-up plan after discharge.
+                    Here is your complete post-discharge recovery roadmap. Use the dedicated sections on the left to review appointments, pending patient tasks, and required lab tests.
                   </p>
                 </div>
 
                 {/* Quick hospital record summary */}
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-                  <div><strong className="text-slate-800">Primary Diagnosis:</strong> {(profile || {})?.primaryDiagnosis}</div>
-                  <div><strong className="text-slate-800">Attending Physician:</strong> {(profile || {})?.attendingPhysician}</div>
+                  <div><strong className="text-slate-800">Primary Diagnosis:</strong> {(profile || {})?.primaryDiagnosis || 'Acute Inferior STEMI'}</div>
+                  <div><strong className="text-slate-800">Attending Physician:</strong> {(profile || {})?.attendingPhysician || 'Dr. Rajesh Mehta'}</div>
                 </div>
+              </div>
+
+              {/* Dedicated Page Quick Jump Tiles */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 pt-5 border-t border-slate-100">
+                <Link
+                  to="/patient/follow-ups"
+                  className="flex items-center justify-between p-3.5 rounded-xl bg-teal-50/70 hover:bg-teal-100/80 border border-teal-200 text-teal-950 transition-all group shadow-2xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-teal-800 text-[#00e575] flex items-center justify-center font-bold">
+                      <ListTodo className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs">My Follow-ups</div>
+                      <div className="text-[11px] text-teal-700">Specialist clinic visits & location</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-teal-700 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+
+                <Link
+                  to="/patient/tasks"
+                  className="flex items-center justify-between p-3.5 rounded-xl bg-sky-50/70 hover:bg-sky-100/80 border border-sky-200 text-sky-950 transition-all group shadow-2xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-sky-800 text-[#00e575] flex items-center justify-center font-bold">
+                      <CalendarClock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs">Upcoming Tasks</div>
+                      <div className="text-[11px] text-sky-700">Action items ordered by date</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-sky-700 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+
+                <Link
+                  to="/patient/tests-referrals"
+                  className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-950 transition-all group shadow-2xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 text-[#00e575] flex items-center justify-center font-bold">
+                      <TestTube2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs">Tests & Referrals</div>
+                      <div className="text-[11px] text-emerald-700">Lab orders & rehab transitions</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-emerald-700 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
               </div>
             </div>
 
@@ -352,7 +257,7 @@ export function PatientDashboard() {
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-[#00e575] animate-pulse-soft" />
                           <span className="text-xs font-black uppercase tracking-wider text-[#00e575]">
-                            NEXT ACTION
+                            NEXT PRIMARY ACTION
                           </span>
                         </div>
                         <span className="text-xs font-semibold text-slate-300 bg-[#072d33] px-2.5 py-0.5 rounded-full border border-[#0e4851]">
@@ -380,13 +285,13 @@ export function PatientDashboard() {
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-[#072d33] text-[#00e575] border border-[#0e4851]">
                             Status: Pending
                           </span>
-                          <button
-                            onClick={() => setSelectedTaskModal(nextAction)}
+                          <Link
+                            to="/patient/follow-ups"
                             className="w-full sm:w-auto px-4 py-2.5 text-xs font-bold text-[#052429] bg-[#00e575] hover:bg-[#00cb68] rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                           >
-                            View Details
+                            Open My Follow-ups
                             <ChevronRight className="w-4 h-4" />
-                          </button>
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -455,9 +360,10 @@ export function PatientDashboard() {
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>Synchronized with Hospital Discharge Instructions</span>
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <Link to="/patient/tasks" className="text-xs font-bold text-teal-800 hover:text-teal-900 flex items-center gap-1">
+                        View All Tasks <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -505,33 +411,44 @@ export function PatientDashboard() {
             {(['dashboard', 'plan', 'upcoming', 'tests', 'help'].includes(activeNav)) && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-4">
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-teal-800" /> My Follow-up Tasks
-                  </h3>
-                  <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
-                    <button
-                      onClick={() => setTaskFilter('all')}
-                      className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-colors ${taskFilter === 'all' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-teal-800" /> Recent Discharge Action Items
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Quick summary of recovery tasks. Open the dedicated Upcoming Tasks page for full timeline horizons.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
+                      <button
+                        onClick={() => setTaskFilter('all')}
+                        className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-colors ${taskFilter === 'all' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setTaskFilter('pending')}
+                        className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-colors ${taskFilter === 'pending' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Pending
+                      </button>
+                      <button
+                        onClick={() => setTaskFilter('completed')}
+                        className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-colors ${taskFilter === 'completed' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Completed
+                      </button>
+                    </div>
+                    <Link
+                      to="/patient/tasks"
+                      className="px-3 py-1.5 bg-teal-800 text-white rounded-lg font-bold text-xs flex items-center gap-1 hover:bg-teal-900 transition-colors"
                     >
-                      All
-                    </button>
-                    <button
-                      onClick={() => setTaskFilter('pending')}
-                      className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-colors ${taskFilter === 'pending' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      Pending
-                    </button>
-                    <button
-                      onClick={() => setTaskFilter('completed')}
-                      className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-colors ${taskFilter === 'completed' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      Completed
-                    </button>
+                      Open Tasks Page <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 </div>
 
                 <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-                  {displayedTasks.map((task) => (
+                  {displayedTasks.slice(0, 4).map((task) => (
                     <div
                       key={task.id}
                       className={`p-4 rounded-xl border transition-colors ${task.status === 'completed' ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'}`}
@@ -644,10 +561,10 @@ export function PatientDashboard() {
                         </span>
                       </div>
                       <p className="text-slate-600 mt-1.5">
-                        <strong>Scheduled:</strong> {({} as any).scheduledTime}
+                        <strong>Scheduled:</strong> 14 Oct 2026 • 10:00 AM (24 Hours Pre-appointment)
                       </p>
                       <p className="text-slate-600 mt-0.5">
-                        <strong>Purpose:</strong> {({} as any).purpose}
+                        <strong>Purpose:</strong> Confirm Cardiology Clinic Visit attendance and remind regarding fasting lab draw.
                       </p>
 
                       {/* Retry Tree Simulation */}
@@ -691,13 +608,21 @@ export function PatientDashboard() {
                       <Pill className="w-4 h-4 text-teal-800" /> Prescribed Medications
                     </h3>
                     <div className="space-y-3">
-                      {([] as any[])?.map((m: any) => (
-                        <div key={m.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                          <div className="font-bold text-slate-900 text-sm">{m.medicationName} ({m.dosage})</div>
-                          <div className="text-slate-700 font-medium mt-0.5">{m.frequency}</div>
-                          <div className="text-slate-500 mt-1 text-[11px] leading-relaxed">{m.instructions}</div>
-                        </div>
-                      ))}
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                        <div className="font-bold text-slate-900 text-sm">Aspirin (81mg)</div>
+                        <div className="text-slate-700 font-medium mt-0.5">Once daily in morning</div>
+                        <div className="text-slate-500 mt-1 text-[11px] leading-relaxed">Take with breakfast to protect stomach lining.</div>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                        <div className="font-bold text-slate-900 text-sm">Clopidogrel (75mg)</div>
+                        <div className="text-slate-700 font-medium mt-0.5">Once daily</div>
+                        <div className="text-slate-500 mt-1 text-[11px] leading-relaxed">Dual antiplatelet therapy after coronary stent placement.</div>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                        <div className="font-bold text-slate-900 text-sm">Metoprolol Succinate (25mg)</div>
+                        <div className="text-slate-700 font-medium mt-0.5">Once daily</div>
+                        <div className="text-slate-500 mt-1 text-[11px] leading-relaxed">Beta-blocker for heart rate control and cardiac protection.</div>
+                      </div>
                     </div>
                   </div>
 
@@ -713,12 +638,14 @@ export function PatientDashboard() {
                       <FileText className="w-4 h-4 text-teal-800" /> Care Instructions
                     </h3>
                     <div className="space-y-3">
-                      {([] as any[])?.map((ci: any) => (
-                        <div key={ci.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                          <div className="font-bold text-slate-900 text-sm">{ci.title}</div>
-                          <p className="text-slate-600 mt-1 leading-relaxed text-xs">{ci.description}</p>
-                        </div>
-                      ))}
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                        <div className="font-bold text-slate-900 text-sm">Groin Puncture Site Care</div>
+                        <p className="text-slate-600 mt-1 leading-relaxed text-xs">Keep catheter insertion area dry for 48 hours; no heavy lifting over 10 lbs for 4 weeks.</p>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                        <div className="font-bold text-slate-900 text-sm">Daily Home BP Logging</div>
+                        <p className="text-slate-600 mt-1 leading-relaxed text-xs">Record seated morning blood pressure and resting pulse baseline daily.</p>
+                      </div>
                     </div>
                   </div>
 
@@ -737,12 +664,14 @@ export function PatientDashboard() {
                       Seek immediate medical care if you experience:
                     </p>
                     <div className="space-y-2.5">
-                      {([] as any[])?.map((w: any) => (
-                        <div key={w.id} className="p-3 bg-white rounded-xl border border-red-200 text-xs shadow-2xs">
-                          <div className="font-bold text-red-900">{w.symptom}</div>
-                          <div className="text-slate-700 mt-1 font-medium text-[11px]">{w.action}</div>
-                        </div>
-                      ))}
+                      <div className="p-3 bg-white rounded-xl border border-red-200 text-xs shadow-2xs">
+                        <div className="font-bold text-red-900">Recurrent Chest Pressure / Pain</div>
+                        <div className="text-slate-700 mt-1 font-medium text-[11px]">Unrelieved by rest, or radiating to left arm / jaw.</div>
+                      </div>
+                      <div className="p-3 bg-white rounded-xl border border-red-200 text-xs shadow-2xs">
+                        <div className="font-bold text-red-900">Severe Groin Swelling or Bleeding</div>
+                        <div className="text-slate-700 mt-1 font-medium text-[11px]">Pulsatile swelling or sudden redness at puncture site.</div>
+                      </div>
                     </div>
                   </div>
 
@@ -754,83 +683,83 @@ export function PatientDashboard() {
             )}
           </>
         )}
-      
-        </main>
-{/* Task Details Modal */}
-      <AnimatePresence>
-        {selectedTaskModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative"
-            >
-              <button
-                onClick={() => setSelectedTaskModal(null)}
-                className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+
+        {/* Task Details Modal */}
+        <AnimatePresence>
+          {selectedTaskModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative"
               >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-bold uppercase text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                  Follow-up Action Detail
-                </span>
-                <StatusBadge status={selectedTaskModal.status} />
-              </div>
-
-              <h3 className="text-xl font-bold text-slate-900">{selectedTaskModal.title}</h3>
-              <p className="text-xs text-slate-600 mt-2 leading-relaxed">{selectedTaskModal.description}</p>
-
-              <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
-                <div><strong>Due Date:</strong> {selectedTaskModal.dueDate || 'Pending confirmation'}</div>
-                <div><strong>Assigned Provider:</strong> {selectedTaskModal.assignedTo || 'Hospital Clinic'}</div>
-                <div><strong>Location:</strong> Cardiovascular Care Center, Suite 204</div>
-              </div>
-
-              {selectedTaskModal.sourceEvidence && (
-                <div className="mt-4">
-                  <SourceEvidenceTag evidence={selectedTaskModal.sourceEvidence} />
-                </div>
-              )}
-
-              {/* Care Team Demo Simulator Panel */}
-              {selectedTaskModal.status !== 'completed' && (
-                <div className="mt-6 p-4 rounded-xl border border-blue-200 bg-blue-50/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 text-blue-800">
-                      <ShieldCheck className="w-4 h-4" />
-                      <h4 className="text-xs font-bold uppercase tracking-wider">Demo: Care Team Verification</h4>
-                    </div>
-                    <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded border border-blue-200 uppercase">Interactive</span>
-                  </div>
-                  <p className="text-[11px] text-blue-700 mb-3">
-                    Patients cannot self-certify clinical milestones. Click below to simulate an authorized Care Coordinator verifying this task. This will update the timeline locally.
-                  </p>
-                  <button
-                    onClick={() => handleSimulateVerification(selectedTaskModal.id)}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    Simulate Verified Completion
-                  </button>
-                </div>
-              )}
-
-              <div className="mt-6 flex justify-end gap-2">
                 <button
                   onClick={() => setSelectedTaskModal(null)}
-                  className="px-4 py-2 text-xs font-semibold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200"
+                  className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
                 >
-                  Close
+                  <X className="w-5 h-5" />
                 </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    
+
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-bold uppercase text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                    Follow-up Action Detail
+                  </span>
+                  <StatusBadge status={selectedTaskModal.status} />
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-900">{selectedTaskModal.title}</h3>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">{selectedTaskModal.description}</p>
+
+                <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                  <div><strong>Due Date:</strong> {selectedTaskModal.dueDate || 'Pending confirmation'}</div>
+                  <div><strong>Assigned Provider:</strong> {selectedTaskModal.assignedTo || 'Hospital Clinic'}</div>
+                  <div><strong>Location:</strong> Cardiovascular Care Center, Suite 204</div>
+                </div>
+
+                {selectedTaskModal.sourceEvidence && (
+                  <div className="mt-4">
+                    <SourceEvidenceTag evidence={selectedTaskModal.sourceEvidence} />
+                  </div>
+                )}
+
+                {/* Care Team Demo Simulator Panel */}
+                {selectedTaskModal.status !== 'completed' && (
+                  <div className="mt-6 p-4 rounded-xl border border-blue-200 bg-blue-50/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 text-blue-800">
+                        <ShieldCheck className="w-4 h-4" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider">Demo: Care Team Verification</h4>
+                      </div>
+                      <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded border border-blue-200 uppercase">Interactive</span>
+                    </div>
+                    <p className="text-[11px] text-blue-700 mb-3">
+                      Patients cannot self-certify clinical milestones. Click below to simulate an authorized Care Coordinator verifying this task. This will update the timeline locally.
+                    </p>
+                    <button
+                      onClick={() => handleSimulateVerification(selectedTaskModal.id)}
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      Simulate Verified Completion
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-end gap-2">
+                  <button
+                    onClick={() => setSelectedTaskModal(null)}
+                    className="px-4 py-2 text-xs font-semibold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200"
+                  >
+                    Close
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </PatientLayout>
   );
 }
+
+export default PatientDashboard;

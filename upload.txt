@@ -1,9 +1,0 @@
-const handleUpload = async () => {
-    if(!uploadFile) return;
-    try {
-      setToastMessage("Uploading document...");
-      const res = await api.uploadDoc(uploadFile);
-      setUploadResult(res); setToastMessage("Document uploaded successfully.");
-      setUploadFile(null);
-    } catch(e) {
-      

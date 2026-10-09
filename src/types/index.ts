@@ -278,4 +278,120 @@ export const DEMO_CREDENTIALS = {
   },
 };
 
+// ============================================================
+// Gemini AI Discharge Intelligence Types
+// ============================================================
+
+export interface ExtractedAppointment {
+  specialty: string;
+  doctorName?: string;
+  date: string;
+  time?: string;
+  location?: string;
+  reason: string;
+  sourceEvidence: string;
+  requiresHumanReview: boolean;
+  reviewReason?: string;
+}
+
+export interface ExtractedLabTest {
+  testName: string;
+  targetDate: string;
+  instructions: string;
+  fastingRequired?: boolean;
+  sourceEvidence: string;
+  requiresHumanReview: boolean;
+  reviewReason?: string;
+}
+
+export interface ExtractedReferral {
+  providerType: string;
+  reason: string;
+  urgency?: string;
+  notes?: string;
+  sourceEvidence: string;
+  requiresHumanReview: boolean;
+  reviewReason?: string;
+}
+
+export interface ExtractedMedication {
+  medicationName: string;
+  dosage?: string;
+  frequency?: string;
+  route?: string;
+  specialInstructions?: string;
+  duration?: string;
+  sourceEvidence: string;
+  requiresHumanReview: boolean;
+  reviewReason?: string;
+}
+
+export interface ExtractedCareInstruction {
+  category: string;
+  instruction: string;
+  sourceEvidence: string;
+  requiresHumanReview: boolean;
+  reviewReason?: string;
+}
+
+export interface ExtractedWarningSign {
+  symptom: string;
+  urgency?: string;
+  actionRequired?: string;
+  sourceEvidence: string;
+}
+
+export interface ExtractedNeedsReviewItem {
+  category: string;
+  item: string;
+  issue: string;
+  reason: string;
+  sourceEvidence?: string;
+}
+
+export interface ExtractedDateItem {
+  date: string;
+  label: string;
+  context?: string;
+  isAmbiguous?: boolean;
+}
+
+export interface ExtractedEvidenceItem {
+  key: string;
+  snippet: string;
+  pageOrSection?: string;
+}
+
+export interface DischargeAnalysisResult {
+  summary: string;
+  patientInfo?: {
+    name?: string;
+    mrn?: string;
+    dob?: string;
+    gender?: string;
+    primaryDiagnosis?: string;
+    admissionDate?: string;
+    dischargeDate?: string;
+    attendingPhysician?: string;
+  };
+  appointments: ExtractedAppointment[];
+  tests: ExtractedLabTest[];
+  referrals: ExtractedReferral[];
+  medicationInstructions: ExtractedMedication[];
+  careInstructions: ExtractedCareInstruction[];
+  warningSigns: (ExtractedWarningSign | string)[];
+  needsReview: ExtractedNeedsReviewItem[];
+  extractedDates: ExtractedDateItem[];
+  evidence: ExtractedEvidenceItem[];
+  patient_mrn?: string;
+  patient_name?: string;
+  discharge_date?: string;
+  follow_ups?: Array<{ specialty: string; appointment_date: string; instruction: string }>;
+  medication_instructions?: Array<{ medication_name: string; instruction: string }>;
+  care_instructions?: Array<Record<string, string>>;
+  warning_signs?: string[];
+  source_evidence?: Array<{ extracted_text: string; page?: number }>;
+}
+
+
 

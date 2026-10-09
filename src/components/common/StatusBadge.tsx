@@ -39,7 +39,7 @@ const priorityConfig: Record<TaskPriority, { label: string; className: string }>
 };
 
 export function PriorityBadge({ priority }: PriorityBadgeProps) {
-  const config = priorityConfig[priority];
+  const config = priorityConfig[priority] || priorityConfig.medium;
   return (
     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${config.className}`}>
       {config.label}
@@ -59,7 +59,7 @@ const escalationConfig: Record<EscalationLevel, { label: string; className: stri
 };
 
 export function EscalationBadge({ level }: EscalationBadgeProps) {
-  const config = escalationConfig[level];
+  const config = escalationConfig[level] || escalationConfig.low;
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-medium rounded border px-2.5 py-0.5 ${config.className}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${level === 'high' || level === 'critical' ? 'bg-red-500 animate-pulse-soft' : 'bg-amber-500'}`} />
@@ -70,11 +70,11 @@ export function EscalationBadge({ level }: EscalationBadgeProps) {
 
 // ── Care Coordination Priority Badge (Prominent Feature) ────
 interface CareCoordinationPriorityBadgeProps {
-  level: CareCoordinationPriorityLevel;
+  level?: CareCoordinationPriorityLevel | string;
   size?: 'sm' | 'md';
 }
 
-const priorityLevelConfig: Record<CareCoordinationPriorityLevel, { label: string; emoji: string; className: string }> = {
+const priorityLevelConfig: Record<string, { label: string; emoji: string; className: string }> = {
   'immediate-review': {
     label: 'Immediate Review',
     emoji: '🔴',
@@ -90,10 +90,21 @@ const priorityLevelConfig: Record<CareCoordinationPriorityLevel, { label: string
     emoji: '🟢',
     className: 'bg-emerald-50 text-emerald-900 border-emerald-200 font-medium',
   },
+  urgent: {
+    label: 'Urgent',
+    emoji: '🔴',
+    className: 'bg-red-50 text-red-900 border-red-200 font-bold',
+  },
+  high: {
+    label: 'High Priority',
+    emoji: '🟠',
+    className: 'bg-amber-50 text-amber-900 border-amber-200 font-bold',
+  }
 };
 
-export function CareCoordinationPriorityBadge({ level, size = 'md' }: CareCoordinationPriorityBadgeProps) {
-  const config = priorityLevelConfig[level];
+export function CareCoordinationPriorityBadge({ level = 'routine', size = 'md' }: CareCoordinationPriorityBadgeProps) {
+  const key = String(level || 'routine').toLowerCase();
+  const config = priorityLevelConfig[key] || priorityLevelConfig.routine;
   const sizeClass = size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1';
 
   return (
@@ -103,3 +114,4 @@ export function CareCoordinationPriorityBadge({ level, size = 'md' }: CareCoordi
     </span>
   );
 }
+
