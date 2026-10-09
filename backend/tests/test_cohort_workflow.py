@@ -1,5 +1,9 @@
 import requests
 import json
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 BASE = "http://localhost:8000"
 
@@ -13,6 +17,26 @@ def test_demo_cohort_workflow():
     headers = {"Authorization": f"Bearer {token}"}
 
     # Initial stats & cohort count
+    # Clean up test patient DEMO-COHORT-9001 if left from a previous test run
+    from database import SessionLocal
+    import models
+    db = SessionLocal()
+    existing_p = db.query(models.Patient).filter(models.Patient.id == "DEMO-COHORT-9001").first()
+    if existing_p:
+        doc_ids = [d.id for d in db.query(models.DischargeDocument).filter(models.DischargeDocument.patient_id == "DEMO-COHORT-9001").all()]
+        if doc_ids:
+            db.query(models.DischargeExtraction).filter(models.DischargeExtraction.document_id.in_(doc_ids)).delete(synchronize_session=False)
+            db.query(models.NeedsReviewIssue).filter(models.NeedsReviewIssue.document_id.in_(doc_ids)).delete(synchronize_session=False)
+        db.query(models.NeedsReviewIssue).filter(models.NeedsReviewIssue.patient_id == "DEMO-COHORT-9001").delete()
+        db.query(models.RequiredTest).filter(models.RequiredTest.patient_id == "DEMO-COHORT-9001").delete()
+        db.query(models.FollowUpTask).filter(models.FollowUpTask.patient_id == "DEMO-COHORT-9001").delete()
+        db.query(models.Appointment).filter(models.Appointment.patient_id == "DEMO-COHORT-9001").delete()
+        db.query(models.TimelineEvent).filter(models.TimelineEvent.patient_id == "DEMO-COHORT-9001").delete()
+        db.query(models.DischargeDocument).filter(models.DischargeDocument.patient_id == "DEMO-COHORT-9001").delete()
+        db.delete(existing_p)
+        db.commit()
+    db.close()
+
     initial_stats = requests.get(f"{BASE}/api/doctor/stats", headers=headers).json()
     initial_patients = requests.get(f"{BASE}/api/doctor/patients", headers=headers).json()
     initial_count = initial_stats.get("totalPatients", 0)
