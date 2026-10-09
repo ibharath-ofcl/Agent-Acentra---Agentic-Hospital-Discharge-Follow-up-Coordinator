@@ -474,9 +474,13 @@ Return ONLY a valid JSON object strictly conforming to this schema:
             "pageOrSection": "Discharge Summary"
         })
 
-        # Extract Patient Name heuristic if present
-        name_matches = re.findall(r'(?:PATIENT NAME|NAME|PATIENT)[:\s]+([A-Za-z\s\.\,\-]+?)(?:\s{2,}|\n|MRN|DOB|\t|$)', text, re.IGNORECASE)
-        dynamic_name = name_matches[0].strip() if name_matches else ("Arun Kumar" if "arun" in text.lower() else "Patient")
+        # Extract Patient Name heuristic if present (avoid matching header titles like PATIENT DISCHARGE SUMMARY)
+        name_matches = re.findall(r'(?:PATIENT NAME|PATIENT FULL NAME|PATIENT)\s*[:\-]\s*([A-Za-z\s\.\,\-]+?)(?:\s{2,}|\n|\||MRN|DOB|\t|$)', text, re.IGNORECASE)
+        dynamic_name = "Arun Kumar" if "arun" in text.lower() else "Patient"
+        if name_matches:
+            cleaned = [n.strip() for n in name_matches if n.strip() and not any(w in n.upper() for w in ["DISCHARGE", "SUMMARY", "RECORD", "REPORT", "INFORMATION", "PORTAL", "INSTRUCTION"])]
+            if cleaned:
+                dynamic_name = cleaned[0]
 
         raw = {
             "summary": summary,
