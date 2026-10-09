@@ -861,6 +861,10 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
             onShowToast={showToast}
             aiStatus={aiStatus}
             onApproved={loadDashboardData}
+            onNavigateTab={(tab) => {
+              setActiveNav(tab);
+              setSearchParams({ tab });
+            }}
           />
         )}
 

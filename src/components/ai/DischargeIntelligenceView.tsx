@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import {
   Sparkles, Brain, Users, Calendar, Pill, AlertOctagon, CheckCircle2,
   RefreshCw, CheckCheck, Info, FileSearch, HeartPulse, ClipboardCheck,
-  ArrowRight, UploadCloud, ClipboardList, FileText, ShieldCheck, AlertTriangle
+  ArrowRight, UploadCloud, ClipboardList, FileText, ShieldCheck, AlertTriangle,
+  Check, LayoutDashboard
 } from 'lucide-react';
 import { geminiService } from '../../services/ai/geminiService';
 import { doctorService, type DocumentRecord } from '../../services/api/doctorService';
@@ -114,12 +115,14 @@ interface DischargeIntelligenceViewProps {
   onShowToast?: (message: string) => void;
   aiStatus?: any;
   onApproved?: (res: any) => void;
+  onNavigateTab?: (tab: string) => void;
 }
 
 export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps> = React.memo(({
   onShowToast,
   aiStatus,
-  onApproved
+  onApproved,
+  onNavigateTab
 }) => {
   const [selectedPresetId, setSelectedPresetId] = useState('arun-cardiac');
   const [dischargeText, setDischargeText] = useState(SYNTHETIC_PRESETS[0].text);
@@ -930,17 +933,19 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
                     <ShieldCheck className="w-5 h-5 text-[#00e575]" />
                     <span className="font-bold text-sm">Human Review & Approval Gate</span>
                     {approvalStatus === 'approved' && (
-                      <span className="text-[10px] font-bold bg-[#00e575] text-[#052429] px-2 py-0.5 rounded-full">
-                        Approved in MySQL
+                      <span className="text-[10px] font-bold bg-[#00e575] text-[#052429] px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Live in MySQL
                       </span>
                     )}
                   </div>
                   <div className="text-xs text-teal-200/80 max-w-xl">
-                    Clinical safety rule: Tasks are not activated in the patient care plan until approved by an authorized Doctor or Care Coordinator.
+                    {approvalStatus === 'approved'
+                      ? 'Care plan and patient records are live in MySQL database. All coordinator dashboards and patient recovery portals have been updated.'
+                      : 'Clinical safety rule: Tasks are not activated in the patient care plan until approved by an authorized Doctor or Care Coordinator.'}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   {uploadedDocId && approvalStatus !== 'approved' && (
                     <button
                       onClick={handleRejectDocument}
@@ -950,34 +955,46 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
                     </button>
                   )}
 
-                  <button
-                    onClick={handleApproveDocument}
-                    disabled={approvalStatus === 'approved' || approvalStatus === 'approving'}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer ${
-                      approvalStatus === 'approved'
-                        ? 'bg-emerald-500 text-white cursor-default'
-                        : approvalStatus === 'approving'
-                        ? 'bg-teal-700 text-teal-200 cursor-wait'
-                        : 'bg-[#00e575] hover:bg-[#00cb68] text-[#052429]'
-                    }`}
-                  >
-                    {approvalStatus === 'approved' ? (
-                      <>
-                        <CheckCheck className="w-4 h-4" />
-                        <span>Care Plan Activated in MySQL</span>
-                      </>
-                    ) : approvalStatus === 'approving' ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Persisting Tasks to DB...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ArrowRight className="w-4 h-4" />
-                        <span>Approve & Activate in MySQL</span>
-                      </>
-                    )}
-                  </button>
+                  {approvalStatus === 'approved' && onNavigateTab && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onNavigateTab('patients')}
+                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Users className="w-3.5 h-3.5 text-[#00e575]" /> View Patient Queue
+                      </button>
+                      <button
+                        onClick={() => onNavigateTab('dashboard')}
+                        className="px-3.5 py-2 rounded-xl bg-[#00e575] hover:bg-[#00cb68] text-[#052429] font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                      >
+                        <LayoutDashboard className="w-3.5 h-3.5" /> Go to Dashboard
+                      </button>
+                    </div>
+                  )}
+
+                  {approvalStatus !== 'approved' && (
+                    <button
+                      onClick={handleApproveDocument}
+                      disabled={approvalStatus === 'approving'}
+                      className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                        approvalStatus === 'approving'
+                          ? 'bg-teal-700 text-teal-200 cursor-wait'
+                          : 'bg-[#00e575] hover:bg-[#00cb68] text-[#052429]'
+                      }`}
+                    >
+                      {approvalStatus === 'approving' ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Persisting Tasks to DB...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowRight className="w-4 h-4" />
+                          <span>Approve & Activate in MySQL</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>

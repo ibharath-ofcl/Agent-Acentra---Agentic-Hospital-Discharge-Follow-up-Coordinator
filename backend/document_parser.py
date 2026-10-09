@@ -26,12 +26,27 @@ def extract_text(file_path: str, ext: str) -> str:
                     matches = re.findall(b'[ -~]{4,}', content)
                     text = " ".join([m.decode('ascii', errors='ignore') for m in matches])
         elif ext in ['doc', 'docx']:
-            with zipfile.ZipFile(file_path) as docx:
-                xml_content = docx.read('word/document.xml')
-                tree = ET.fromstring(xml_content)
-                for node in tree.iter():
-                    if node.tag.endswith('}t') and node.text:
-                        text += node.text + " "
+            try:
+                with zipfile.ZipFile(file_path) as docx:
+                    xml_content = docx.read('word/document.xml')
+                    tree = ET.fromstring(xml_content)
+                    paragraphs = []
+                    for node in tree.iter():
+                        if node.tag.endswith('}p') or node.tag.endswith('}tr'):
+                            p_text = "".join([t.text for t in node.iter() if t.tag.endswith('}t') and t.text])
+                            if p_text.strip():
+                                paragraphs.append(p_text.strip())
+                    if paragraphs:
+                        text = "\n".join(paragraphs)
+                    else:
+                        text = " ".join([node.text for node in tree.iter() if node.tag.endswith('}t') and node.text])
+            except Exception as docx_err:
+                print(f"Docx parsing issue: {docx_err}")
+                try:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        text = f.read()
+                except Exception:
+                    pass
         elif ext in ['png', 'jpg', 'jpeg', 'webp']:
             # For image files, we return a header noting image format for multimodal Gemini processing
             text = f"[IMAGE_DOCUMENT: {os.path.basename(file_path)}]\nFormat: {ext.upper()}"
