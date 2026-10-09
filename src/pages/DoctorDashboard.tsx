@@ -77,34 +77,31 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
   const [loading, setLoading] = useState(true);
   const [aiStatus, setAiStatus] = useState<any>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      try {
-        const [s, p, r, o, ai] = await Promise.all([
-          doctorService.getStats(),
-          doctorService.getPatients(),
-          doctorService.getNeedsReview(),
-          doctorService.getOverdue(),
-          geminiService.getAiStatus()
-        ]);
-        if (!isMounted) return;
-        if (s && typeof s === 'object') setStats(s);
-        setPriorityList(Array.isArray(p) ? p : []);
-        setReviewQueue(Array.isArray(r) ? r : []);
-        setOverdueItems(Array.isArray(o) ? o : []);
-        if (ai) setAiStatus(ai);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [s, p, r, o, ai] = await Promise.all([
+        doctorService.getStats(),
+        doctorService.getPatients(),
+        doctorService.getNeedsReview(),
+        doctorService.getOverdue(),
+        geminiService.getAiStatus()
+      ]);
+      if (s && typeof s === 'object') setStats(s);
+      setPriorityList(Array.isArray(p) ? p : []);
+      setReviewQueue(Array.isArray(r) ? r : []);
+      setOverdueItems(Array.isArray(o) ? o : []);
+      if (ai) setAiStatus(ai);
+    } catch (e) {
+      console.error("Failed to load dashboard data:", e);
+    } finally {
+      setLoading(false);
     }
-    loadData();
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData, activeNav]);
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -863,6 +860,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
           <DischargeIntelligenceView
             onShowToast={showToast}
             aiStatus={aiStatus}
+            onApproved={loadDashboardData}
           />
         )}
 

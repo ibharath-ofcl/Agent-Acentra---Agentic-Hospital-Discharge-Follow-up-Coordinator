@@ -66,9 +66,10 @@ class DischargeLLMProvider:
         if not text_clean:
             return self._empty_response("No document text was provided for analysis.")
 
-        # Extract MRN heuristic if present for synthetic routing & matching
-        mrns = re.findall(r'MRN-[0-9A-Za-z]+', text_clean, re.IGNORECASE)
-        dynamic_mrn = mrns[0].upper() if mrns else None
+        # Extract MRN and Patient Name heuristics if present for synthetic routing & matching
+        mrn_matches = re.findall(r'(?:MRN|PATIENT ID|RECORD NO|ID)[:\s\-_]+([0-9A-Za-z\-_]+)', text_clean, re.IGNORECASE)
+        direct_mrns = re.findall(r'(?:MRN|DEMO|PAT)-[0-9A-Za-z\-_]+', text_clean, re.IGNORECASE)
+        dynamic_mrn = direct_mrns[0].upper() if direct_mrns else (mrn_matches[0].upper() if mrn_matches else None)
 
         # --- TEST ROUTING FOR AUTOMATED PIPELINE TESTS ---
         if "TEST_MOCK_VALID" in text_clean:
@@ -473,10 +474,14 @@ Return ONLY a valid JSON object strictly conforming to this schema:
             "pageOrSection": "Discharge Summary"
         })
 
+        # Extract Patient Name heuristic if present
+        name_matches = re.findall(r'(?:PATIENT NAME|NAME|PATIENT)[:\s]+([A-Za-z\s\.\,\-]+?)(?:\s{2,}|\n|MRN|DOB|\t|$)', text, re.IGNORECASE)
+        dynamic_name = name_matches[0].strip() if name_matches else ("Arun Kumar" if "arun" in text.lower() else "Patient")
+
         raw = {
             "summary": summary,
             "patientInfo": {
-                "name": "Arun Kumar" if "arun" in text.lower() else "Patient",
+                "name": dynamic_name,
                 "mrn": mrn or "MRN-9281C",
                 "dischargeDate": "2026-10-10",
                 "primaryDiagnosis": "Acute Myocardial Infarction (STEMI)" if "stemi" in text.lower() or "infarction" in text.lower() else "Post-Discharge Recovery",

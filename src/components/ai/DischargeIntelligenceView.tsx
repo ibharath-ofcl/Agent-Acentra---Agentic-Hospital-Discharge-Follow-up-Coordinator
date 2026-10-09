@@ -113,11 +113,13 @@ WARNING SIGNS / RED FLAGS:
 interface DischargeIntelligenceViewProps {
   onShowToast?: (message: string) => void;
   aiStatus?: any;
+  onApproved?: (res: any) => void;
 }
 
 export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps> = React.memo(({
   onShowToast,
-  aiStatus
+  aiStatus,
+  onApproved
 }) => {
   const [selectedPresetId, setSelectedPresetId] = useState('arun-cardiac');
   const [dischargeText, setDischargeText] = useState(SYNTHETIC_PRESETS[0].text);
@@ -256,13 +258,14 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
       const res = await doctorService.approveDocument(uploadedDocId);
       setApprovalStatus('approved');
       setSyncedToCarePlan(true);
-      onShowToast?.(`✓ Approved & persisted to MySQL! Created ${res.tasks_created || 0} tasks, ${res.appointments_created || 0} appointments.`);
+      onShowToast?.(`✓ Approved & persisted to MySQL! Created ${res.tasks_created || res.createdTasksCount || 0} tasks, ${res.appointments_created || 0} appointments.`);
       loadDocumentsList();
+      onApproved?.(res);
     } catch (err: any) {
       setAnalysisError(err.message || 'Approval failed.');
       setApprovalStatus('idle');
     }
-  }, [uploadedDocId, handleSyncToCarePlan, loadDocumentsList, onShowToast]);
+  }, [uploadedDocId, handleSyncToCarePlan, loadDocumentsList, onShowToast, onApproved]);
 
   const handleRejectDocument = useCallback(async () => {
     if (!uploadedDocId) return;

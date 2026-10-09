@@ -194,6 +194,38 @@ export function DoctorCareInstructionsPage() {
     setTimeout(() => setToastMessage(null), 3500);
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    async function loadData() {
+      try {
+        const data = await doctorService.getCareInstructions();
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          const mapped: CareInstructionItem[] = data.map((d: any, idx: number) => ({
+            id: d.id || `CI-${idx + 1}`,
+            patientId: d.patientId || 'P001',
+            patientName: d.patientName || 'Patient',
+            mrn: d.patientId || 'MRN-9281C',
+            category: (d.category || 'Medication Instructions') as any,
+            title: d.instruction || d.title || 'Care Protocol',
+            instructionText: d.instruction || d.title || 'Follow prescribed care instruction.',
+            sourceDocument: d.source || 'Discharge Summary',
+            sourcePage: 1,
+            sourceSection: d.category || 'Post-Discharge Instructions',
+            extractedSnippet: d.instruction || d.title || 'Instruction documented at discharge.',
+            confidence: 0.98,
+            status: (d.status === 'completed' ? 'verified' : d.status === 'needs-review' ? 'needs-review' : 'active') as any,
+            lastUpdated: '09 Oct 2026'
+          }));
+          setInstructions(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to load care instructions:", err);
+      }
+    }
+    loadData();
+    return () => { isMounted = false; };
+  }, []);
+
   const categories = useMemo(() => [
     'Medication Instructions',
     'Wound Care',
