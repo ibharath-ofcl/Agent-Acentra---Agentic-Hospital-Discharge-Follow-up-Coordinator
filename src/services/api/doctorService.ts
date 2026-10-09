@@ -228,5 +228,43 @@ export const doctorService = {
       patientName: raw.patient_name || raw.patientName,
       extractionId: raw.extraction_id || raw.extractionId
     };
+  },
+
+  getAppointments: async (patientId?: string): Promise<any[]> => {
+    const query = patientId ? `?patient_id=${encodeURIComponent(patientId)}` : '';
+    return await fetchJson<any[]>(`/api/doctor/appointments${query}`);
+  },
+
+  createAppointment: async (payload: {
+    patient_id: string;
+    appointment_date: string;
+    time_str?: string;
+    doctor_name?: string;
+    department?: string;
+    location?: string;
+    notes?: string;
+    send_confirmation_email?: boolean;
+    status?: string;
+  }): Promise<any> => {
+    return await fetchJson<any>('/api/doctor/appointments', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  confirmAppointment: async (apptId: string): Promise<any> => {
+    return await fetchJson<any>(`/api/doctor/appointments/${apptId}/confirm`, {
+      method: 'POST'
+    });
+  },
+
+  getNotifications: async (params?: { scenario?: string; patient_id?: string; channel?: string }): Promise<any[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.scenario) searchParams.append('scenario', params.scenario);
+    if (params?.patient_id) searchParams.append('patient_id', params.patient_id);
+    if (params?.channel) searchParams.append('channel', params.channel);
+    const queryStr = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    return await fetchJson<any[]>(`/api/doctor/notifications${queryStr}`);
   }
 };
+

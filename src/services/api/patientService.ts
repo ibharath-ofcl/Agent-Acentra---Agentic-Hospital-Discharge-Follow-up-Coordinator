@@ -123,5 +123,20 @@ export const patientService = {
       throw new Error(errMsg);
     }
     return res.json();
+  },
+
+  bookAppointment: async (payload: {
+    appointment_date: string;
+    time_str?: string;
+    department?: string;
+    doctor_name?: string;
+    preferred_language?: string;
+    notes?: string;
+  }): Promise<any> => {
+    return await fetchJson<any>('/api/patient/appointments/book', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   }
 };
+

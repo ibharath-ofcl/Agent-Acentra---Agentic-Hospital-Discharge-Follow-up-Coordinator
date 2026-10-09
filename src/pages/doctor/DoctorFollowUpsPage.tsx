@@ -312,28 +312,85 @@ export function DoctorFollowUpsPage() {
   const [selectedFollowUp, setSelectedFollowUp] = useState<FollowUpRecord | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Booking Modal State
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingPatientId, setBookingPatientId] = useState('MRN-RAVI-001');
+  const [bookingDate, setBookingDate] = useState('2026-10-15');
+  const [bookingTime, setBookingTime] = useState('10:30 AM');
+  const [bookingDoctor, setBookingDoctor] = useState('Dr. Rajesh Mehta');
+  const [bookingDept, setBookingDept] = useState('Cardiology Outpatient Clinic');
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [sendConfirmationEmail, setSendConfirmationEmail] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      try {
-        const data = await doctorService.getFollowUps();
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setFollowUps(data);
-        }
-      } catch (err) {
-        console.error("Failed to load doctor follow-ups:", err);
-      } finally {
-        if (isMounted) setLoading(false);
+  const loadData = useCallback(async () => {
+    try {
+      const data = await doctorService.getFollowUps();
+      if (Array.isArray(data) && data.length > 0) {
+        setFollowUps(data);
       }
+    } catch (err) {
+      console.error("Failed to load doctor follow-ups:", err);
+    } finally {
+      setLoading(false);
     }
-    loadData();
-    return () => { isMounted = false; };
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleDoctorBookAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingDate) {
+      showToast('⚠️ Please enter an appointment date');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await doctorService.createAppointment({
+        patient_id: bookingPatientId,
+        appointment_date: bookingDate,
+        time_str: bookingTime,
+        doctor_name: bookingDoctor,
+        department: bookingDept,
+        notes: bookingNotes || 'Scheduled by Coordinator',
+        send_confirmation_email: sendConfirmationEmail,
+        status: 'scheduled'
+      });
+      const emailStatus = res.emailNotification?.status;
+      const statusText = emailStatus === 'sent' ? 'Dispatched to inbox' :
+                         emailStatus === 'simulated' ? 'Simulated & logged' :
+                         emailStatus === 'skipped' ? 'Skipped (Consent)' : 'Logged';
+      showToast(`✓ Appointment saved in MySQL for ${res.appointment?.patientName || 'Patient'}! Email: ${statusText}`);
+      setIsBookingOpen(false);
+      await loadData();
+    } catch (err: any) {
+      showToast(`⚠️ Booking failed: ${err.message || 'Error creating appointment'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmAppointment = async (apptId: string, patientName: string) => {
+    setConfirmingId(apptId);
+    try {
+      const res = await doctorService.confirmAppointment(apptId);
+      const emailStatus = res.emailNotification?.status;
+      showToast(`✓ Appointment confirmed for ${patientName}! Confirmation email: ${emailStatus === 'sent' ? 'Sent' : 'Simulated & Logged'}`);
+      await loadData();
+    } catch (err: any) {
+      showToast(`⚠️ Confirmation error: ${err.message || 'Failed'}`);
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   // Compute operational stats
   const stats = useMemo(() => {
@@ -419,7 +476,18 @@ export function DoctorFollowUpsPage() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => showToast('Follow-up list synchronized with HMS backend')}
+              onClick={() => setIsBookingOpen(true)}
+              className="px-3.5 py-2 bg-gradient-to-r from-teal-700 to-teal-800 hover:from-teal-800 hover:to-teal-900 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Book Appointment</span>
+            </button>
+
+            <button
+              onClick={() => {
+                loadData();
+                showToast('Follow-up list synchronized with HMS backend');
+              }}
               className="px-3 py-2 bg-white border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-xs font-bold shadow-xs hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5 text-teal-700" />
@@ -815,7 +883,166 @@ export function DoctorFollowUpsPage() {
             </motion.div>
           </div>
         )}
+
+        {/* Doctor Appointment Booking Modal */}
+        {isBookingOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-800">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">Book Patient Follow-up</h3>
+                    <p className="text-[11px] text-slate-500">CareFlow AI • Instant MySQL Sync & Email Dispatch</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsBookingOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleDoctorBookAppointment} className="py-4 space-y-4 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Select Patient <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={bookingPatientId}
+                    onChange={e => setBookingPatientId(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900 cursor-pointer"
+                  >
+                    <option value="MRN-RAVI-001">Ravi Kumar (MRN-RAVI-001 • ravi@example.com)</option>
+                    <option value="P001">Arun Kumar (P001 • arun.kumar@gmail.com)</option>
+                    <option value="P002">Priya Sharma (P002 • priya.sharma@example.com)</option>
+                    <option value="P003">Rahul Kumar (P003 • rahul.kumar@gmail.com)</option>
+                    <option value="P005">Lakshmi Venkatesh (P005 • lakshmi.v@example.com)</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Appointment Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={bookingDate}
+                      onChange={e => setBookingDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Time Slot</label>
+                    <select
+                      value={bookingTime}
+                      onChange={e => setBookingTime(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900 cursor-pointer"
+                    >
+                      <option value="09:00 AM">09:00 AM</option>
+                      <option value="10:30 AM">10:30 AM</option>
+                      <option value="11:45 AM">11:45 AM</option>
+                      <option value="02:00 PM">02:00 PM</option>
+                      <option value="03:30 PM">03:30 PM</option>
+                      <option value="04:45 PM">04:45 PM</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Specialty Department</label>
+                  <select
+                    value={bookingDept}
+                    onChange={e => setBookingDept(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900 cursor-pointer"
+                  >
+                    <option value="Cardiology Outpatient Clinic">Cardiology Outpatient Clinic</option>
+                    <option value="Endocrinology & Diabetic Care">Endocrinology & Diabetic Care</option>
+                    <option value="General & Laparoscopic Surgery">General & Laparoscopic Surgery</option>
+                    <option value="Nephrology & Renal Health">Nephrology & Renal Health</option>
+                    <option value="Orthopedic Surgical Recovery">Orthopedic Surgical Recovery</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Attending Physician / Specialist</label>
+                  <input
+                    type="text"
+                    value={bookingDoctor}
+                    onChange={e => setBookingDoctor(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900"
+                    placeholder="e.g. Dr. Rajesh Mehta"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Clinical Follow-up Notes</label>
+                  <textarea
+                    rows={2}
+                    value={bookingNotes}
+                    onChange={e => setBookingNotes(e.target.value)}
+                    placeholder="e.g. Scheduled post-discharge clinical evaluation & lab review"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900"
+                  />
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-teal-700" />
+                    <span className="font-semibold text-slate-800">Dispatch Multilingual Confirmation Email</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={sendConfirmationEmail}
+                    onChange={e => setSendConfirmationEmail(e.target.checked)}
+                    className="w-4 h-4 text-teal-800 rounded focus:ring-teal-500 cursor-pointer"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => setIsBookingOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-xl font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving & Dispatching Email...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Save in MySQL & Confirm</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </DoctorLayout>
   );
 }
+

@@ -22,6 +22,7 @@ from services.automation_service import (
     get_current_date
 )
 from services.scheduler import start_scheduler, shutdown_scheduler
+from services.email_service import send_appointment_confirmation_email, send_email, is_valid_email
 
 app = FastAPI(title="CareFlow AI Backend")
 
@@ -1741,3 +1742,353 @@ def ai_status():
         "safetyBoundaries": "Active (Zero autonomous diagnoses or unauthorized dosage changes)",
         "disclaimer": "Synthetic healthcare data — demonstration only."
     }
+
+# ======================= APPOINTMENT MANAGEMENT & MULTILINGUAL EMAIL CONFIRMATION =======================
+
+class CreateAppointmentRequest(BaseModel):
+    patient_id: str
+    appointment_date: str
+    time_str: Optional[str] = "10:30 AM"
+    doctor_name: Optional[str] = "Dr. Rajesh Mehta"
+    department: Optional[str] = "Cardiology"
+    location: Optional[str] = "Specialty Outpatient Pavilion • Suite 204"
+    notes: Optional[str] = None
+    send_confirmation_email: Optional[bool] = True
+    status: Optional[str] = "scheduled"
+
+class PatientBookAppointmentRequest(BaseModel):
+    appointment_date: str
+    time_str: Optional[str] = "10:30 AM"
+    department: Optional[str] = "Cardiology"
+    doctor_name: Optional[str] = "Dr. Rajesh Mehta"
+    preferred_language: Optional[str] = None
+    notes: Optional[str] = None
+
+@app.post("/api/doctor/appointments")
+def create_doctor_appointment(
+    req: CreateAppointmentRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403, detail="Coordinator or Clinician authorization required.")
+
+    patient = db.query(models.Patient).filter(models.Patient.id == req.patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail=f"Patient '{req.patient_id}' not found in MySQL records.")
+
+    # Parse appointment date
+    parsed_date = None
+    clean_date = req.appointment_date.strip()
+    for fmt in ["%Y-%m-%d", "%d %B %Y", "%d %b %Y", "%m/%d/%Y", "%d/%m/%Y"]:
+        try:
+            parsed_date = datetime.datetime.strptime(clean_date, fmt).date()
+            break
+        except ValueError:
+            pass
+    if not parsed_date:
+        parsed_date = datetime.date(2026, 10, 15)
+
+    appt_id = f"APT-{patient.id[:8].upper()}-{uuid.uuid4().hex[:6].upper()}"
+    
+    # 1. Save Appointment in MySQL
+    new_appt = models.Appointment(
+        id=appt_id,
+        patient_id=patient.id,
+        appointment_date=parsed_date,
+        time_str=req.time_str or "10:30 AM",
+        doctor_name=req.doctor_name or "Dr. Rajesh Mehta",
+        department=req.department or "Cardiology",
+        location=req.location or "Specialty Outpatient Pavilion • Suite 204",
+        status=req.status or "scheduled",
+        notes=req.notes or f"Follow-up scheduled by {current_user.name}"
+    )
+    db.add(new_appt)
+
+    # 2. Add FollowUpTask
+    task_id = f"TASK-{uuid.uuid4().hex[:8].upper()}"
+    task = models.FollowUpTask(
+        id=task_id,
+        patient_id=patient.id,
+        title=f"Follow-up: {new_appt.department} Consultation ({new_appt.doctor_name})",
+        due_date=parsed_date.strftime("%d %B %Y"),
+        status="pending",
+        task_type="appointment",
+        specialty=new_appt.department,
+        attending=new_appt.doctor_name,
+        source="CareFlow Appointment Booking"
+    )
+    db.add(task)
+
+    # 3. Add Timeline Event
+    tl_id = f"TL-APT-{uuid.uuid4().hex[:8].upper()}"
+    tl = models.TimelineEvent(
+        id=tl_id,
+        patient_id=patient.id,
+        date_str=datetime.datetime.utcnow().strftime("%d %b"),
+        title=f"Appointment Booked: {new_appt.department}",
+        description=f"Confirmed with {new_appt.doctor_name} for {parsed_date.strftime('%d %B %Y')} at {new_appt.time_str}.",
+        status="scheduled",
+        event_type="appointment"
+    )
+    db.add(tl)
+    db.commit()
+    db.refresh(new_appt)
+
+    # 4. Multilingual Email Confirmation Workflow
+    email_result = None
+    if req.send_confirmation_email:
+        email_result = send_appointment_confirmation_email(
+            db=db,
+            appointment=new_appt,
+            patient=patient,
+            force_resend=False
+        )
+
+    return {
+        "status": "success",
+        "message": f"Appointment booked successfully for {patient.name}.",
+        "appointment": {
+            "id": new_appt.id,
+            "patientId": patient.id,
+            "patientName": patient.name,
+            "patientEmail": patient.email,
+            "preferredLanguage": patient.preferred_language,
+            "date": new_appt.appointment_date.strftime("%Y-%m-%d"),
+            "formattedDate": new_appt.appointment_date.strftime("%d %B %Y"),
+            "time": new_appt.time_str,
+            "doctor": new_appt.doctor_name,
+            "department": new_appt.department,
+            "location": new_appt.location,
+            "status": new_appt.status,
+            "notes": new_appt.notes
+        },
+        "emailNotification": email_result
+    }
+
+@app.post("/api/doctor/appointments/{appt_id}/confirm")
+def confirm_doctor_appointment(
+    appt_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403, detail="Coordinator authorization required.")
+
+    appt = db.query(models.Appointment).filter(models.Appointment.id == appt_id).first()
+    if not appt:
+        raise HTTPException(status_code=404, detail="Appointment not found.")
+
+    patient = db.query(models.Patient).filter(models.Patient.id == appt.patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Associated patient record not found.")
+
+    appt.status = "confirmed"
+    
+    # Add timeline event
+    tl = models.TimelineEvent(
+        id=f"TL-CONF-{uuid.uuid4().hex[:8].upper()}",
+        patient_id=patient.id,
+        date_str=datetime.datetime.utcnow().strftime("%d %b"),
+        title=f"Appointment Confirmed: {appt.department}",
+        description=f"Confirmed for {appt.appointment_date.strftime('%d %B %Y')} with {appt.doctor_name}.",
+        status="completed",
+        event_type="appointment"
+    )
+    db.add(tl)
+    db.commit()
+    db.refresh(appt)
+
+    # Trigger email confirmation
+    email_result = send_appointment_confirmation_email(
+        db=db,
+        appointment=appt,
+        patient=patient,
+        force_resend=True
+    )
+
+    return {
+        "status": "success",
+        "message": f"Appointment confirmed for {patient.name}. Confirmation email dispatched.",
+        "appointmentId": appt.id,
+        "newStatus": appt.status,
+        "emailNotification": email_result
+    }
+
+@app.get("/api/doctor/appointments")
+def list_doctor_appointments(
+    patient_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403)
+
+    query = db.query(models.Appointment)
+    if patient_id:
+        query = query.filter(models.Appointment.patient_id == patient_id)
+
+    appts = query.order_by(desc(models.Appointment.created_at)).all()
+    results = []
+
+    for a in appts:
+        p = a.patient
+        # Fetch latest notification log for this appointment
+        latest_notif = db.query(models.NotificationLog).filter(
+            models.NotificationLog.appointment_id == a.id
+        ).order_by(desc(models.NotificationLog.created_at)).first()
+
+        results.append({
+            "id": a.id,
+            "patientId": a.patient_id,
+            "patientName": p.name if p else "Unknown",
+            "patientEmail": p.email if p else None,
+            "preferredLanguage": p.preferred_language if p else "English",
+            "date": a.appointment_date.strftime("%Y-%m-%d") if a.appointment_date else "",
+            "formattedDate": a.appointment_date.strftime("%d %B %Y") if a.appointment_date else "-",
+            "time": a.time_str or "10:30 AM",
+            "doctor": a.doctor_name or "Dr. Rajesh Mehta",
+            "department": a.department or "Cardiology",
+            "location": a.location or "Specialty Outpatient Pavilion",
+            "status": a.status or "scheduled",
+            "notes": a.notes or "",
+            "emailStatus": latest_notif.status if latest_notif else "not_sent",
+            "emailRecipient": latest_notif.recipient_email if latest_notif else (p.email if p else None),
+            "emailSentAt": latest_notif.sent_at.isoformat() if latest_notif and latest_notif.sent_at else None,
+            "emailProviderId": latest_notif.provider_message_id if latest_notif else None
+        })
+
+    return results
+
+@app.get("/api/doctor/notifications")
+def list_doctor_notifications(
+    scenario: Optional[str] = None,
+    patient_id: Optional[str] = None,
+    channel: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403)
+
+    query = db.query(models.NotificationLog)
+    if scenario:
+        query = query.filter(models.NotificationLog.scenario == scenario)
+    if patient_id:
+        query = query.filter(models.NotificationLog.patient_id == patient_id)
+    if channel:
+        query = query.filter(models.NotificationLog.channel == channel)
+
+    logs = query.order_by(desc(models.NotificationLog.created_at)).limit(100).all()
+    
+    return [{
+        "id": n.id,
+        "patientId": n.patient_id,
+        "patientName": n.patient.name if n.patient else "Patient",
+        "appointmentId": n.appointment_id,
+        "scenario": n.scenario,
+        "channel": n.channel,
+        "status": n.status,
+        "subject": n.subject,
+        "message": n.message,
+        "recipientEmail": n.recipient_email,
+        "recipientPhone": n.recipient_phone,
+        "providerMessageId": n.provider_message_id,
+        "errorMessage": n.error_message,
+        "sentAt": n.sent_at.isoformat() if n.sent_at else None,
+        "createdAt": n.created_at.isoformat() if n.created_at else None
+    } for n in logs]
+
+@app.post("/api/patient/appointments/book")
+def patient_book_appointment(
+    req: PatientBookAppointmentRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'patient' or not current_user.patient:
+        raise HTTPException(status_code=403, detail="Patient authorization required.")
+
+    patient = current_user.patient
+
+    # Update preferred language if selected by patient
+    if req.preferred_language:
+        patient.preferred_language = req.preferred_language
+
+    # Parse date
+    parsed_date = None
+    clean_date = req.appointment_date.strip()
+    for fmt in ["%Y-%m-%d", "%d %B %Y", "%d %b %Y", "%m/%d/%Y", "%d/%m/%Y"]:
+        try:
+            parsed_date = datetime.datetime.strptime(clean_date, fmt).date()
+            break
+        except ValueError:
+            pass
+    if not parsed_date:
+        parsed_date = datetime.date(2026, 10, 15)
+
+    appt_id = f"APT-PAT-{patient.id[:6].upper()}-{uuid.uuid4().hex[:6].upper()}"
+
+    # 1. Create Appointment in MySQL
+    new_appt = models.Appointment(
+        id=appt_id,
+        patient_id=patient.id,
+        appointment_date=parsed_date,
+        time_str=req.time_str or "10:30 AM",
+        doctor_name=req.doctor_name or "Dr. Rajesh Mehta",
+        department=req.department or "Cardiology",
+        location="CareFlow Outpatient Pavilion • Suite 204",
+        status="confirmed",
+        notes=req.notes or "Scheduled directly via Patient Portal"
+    )
+    db.add(new_appt)
+
+    # 2. Add Task
+    task = models.FollowUpTask(
+        id=f"TASK-PAT-{uuid.uuid4().hex[:8].upper()}",
+        patient_id=patient.id,
+        title=f"Confirmed Visit: {new_appt.department} ({new_appt.doctor_name})",
+        due_date=parsed_date.strftime("%d %B %Y"),
+        status="pending",
+        task_type="appointment",
+        specialty=new_appt.department,
+        attending=new_appt.doctor_name,
+        source="Patient Portal Booking"
+    )
+    db.add(task)
+
+    # 3. Add Timeline Event
+    tl = models.TimelineEvent(
+        id=f"TL-PAT-{uuid.uuid4().hex[:8].upper()}",
+        patient_id=patient.id,
+        date_str=datetime.datetime.utcnow().strftime("%d %b"),
+        title=f"Appointment Booked: {new_appt.department}",
+        description=f"Self-scheduled follow-up consultation with {new_appt.doctor_name} for {parsed_date.strftime('%d %B %Y')} at {new_appt.time_str}.",
+        status="completed",
+        event_type="appointment"
+    )
+    db.add(tl)
+    db.commit()
+    db.refresh(new_appt)
+
+    # 4. Trigger Email Confirmation
+    email_result = send_appointment_confirmation_email(
+        db=db,
+        appointment=new_appt,
+        patient=patient,
+        force_resend=False
+    )
+
+    return {
+        "status": "success",
+        "message": f"Your appointment is confirmed for {parsed_date.strftime('%d %B %Y')} at {new_appt.time_str}.",
+        "appointment": {
+            "id": new_appt.id,
+            "date": new_appt.appointment_date.strftime("%d %B %Y"),
+            "time": new_appt.time_str,
+            "doctor": new_appt.doctor_name,
+            "department": new_appt.department,
+            "status": new_appt.status
+        },
+        "emailConfirmation": email_result
+    }
+

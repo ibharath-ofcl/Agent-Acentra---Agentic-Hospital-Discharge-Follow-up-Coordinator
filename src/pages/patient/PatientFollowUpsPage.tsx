@@ -176,10 +176,47 @@ export function PatientFollowUpsPage() {
   const [selectedFollowUp, setSelectedFollowUp] = useState<PatientFollowUpItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Booking Modal State
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingDate, setBookingDate] = useState('2026-10-15');
+  const [bookingTime, setBookingTime] = useState('10:30 AM');
+  const [bookingDept, setBookingDept] = useState('Cardiology Outpatient Clinic');
+  const [bookingDoctor, setBookingDoctor] = useState('Dr. Rajesh Mehta');
+  const [bookingLang, setBookingLang] = useState('en');
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState<any>(null);
+
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   }, []);
+
+  const handleBookAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingDate) {
+      showToast('⚠️ Please select an appointment date');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await patientService.bookAppointment({
+        appointment_date: bookingDate,
+        time_str: bookingTime,
+        department: bookingDept,
+        doctor_name: bookingDoctor,
+        preferred_language: bookingLang,
+        notes: bookingNotes || 'Booked via Patient Portal'
+      });
+      setBookingSuccess(res);
+      showToast(`✓ Appointment confirmed! Confirmation email dispatched to your registered email in ${bookingLang === 'ta' ? 'Tamil' : bookingLang === 'hi' ? 'Hindi' : 'English'}.`);
+      await loadFollowUps();
+    } catch (err: any) {
+      showToast(`⚠️ Booking error: ${err.message || 'Unable to complete booking'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const loadFollowUps = useCallback(async () => {
     setLoading(true);
@@ -265,7 +302,18 @@ export function PatientFollowUpsPage() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => showToast('Follow-up appointments synchronized with hospital schedule')}
+              onClick={() => setIsBookingOpen(true)}
+              className="px-3.5 py-2 bg-gradient-to-r from-teal-700 to-teal-800 hover:from-teal-800 hover:to-teal-900 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Book Appointment</span>
+            </button>
+
+            <button
+              onClick={() => {
+                loadFollowUps();
+                showToast('Follow-up appointments synchronized with hospital schedule');
+              }}
               className="px-3 py-2 bg-white border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-xs font-bold shadow-xs hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5 text-teal-700" />
@@ -536,7 +584,214 @@ export function PatientFollowUpsPage() {
             </motion.div>
           </div>
         )}
+
+        {/* Self-Service Appointment Booking Modal */}
+        {isBookingOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-800">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">Book Clinical Follow-up</h3>
+                    <p className="text-[11px] text-slate-500">Connected directly to Hospital CareFlow & MySQL DB</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsBookingOpen(false);
+                    setBookingSuccess(null);
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {bookingSuccess ? (
+                <div className="py-6 space-y-4 text-center">
+                  <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mx-auto">
+                    <CheckCircle2 className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-base">Appointment Successfully Confirmed!</h4>
+                    <p className="text-xs text-slate-600 mt-1">
+                      Your visit has been recorded in MySQL and synchronized with your hospital care timeline.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Confirmed Date:</span>
+                      <span className="font-bold text-slate-900">{bookingSuccess.appointment?.date}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Scheduled Time:</span>
+                      <span className="font-bold text-slate-900">{bookingSuccess.appointment?.time}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Specialist:</span>
+                      <span className="font-bold text-slate-900">{bookingSuccess.appointment?.doctor}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Email Notification Status:</span>
+                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        {bookingSuccess.emailConfirmation?.status === 'sent' ? '✓ Dispatched to Inbox' :
+                         bookingSuccess.emailConfirmation?.status === 'simulated' ? '⚡ Simulated & Logged' :
+                         bookingSuccess.emailConfirmation?.status === 'skipped' ? '⚠️ Skipped (Consent)' : '✕ Delivery Issue'}
+                      </span>
+                    </div>
+                    {bookingSuccess.emailConfirmation?.recipientEmail && (
+                      <div className="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+                        <span>Recipient Email:</span>
+                        <span className="font-mono text-slate-700">{bookingSuccess.emailConfirmation.recipientEmail}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setIsBookingOpen(false);
+                      setBookingSuccess(null);
+                    }}
+                    className="w-full py-2.5 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Done & View Schedule
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleBookAppointment} className="py-4 space-y-4 text-xs">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Appointment Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={bookingDate}
+                      onChange={e => setBookingDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Time Slot</label>
+                      <select
+                        value={bookingTime}
+                        onChange={e => setBookingTime(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900 cursor-pointer"
+                      >
+                        <option value="09:00 AM">09:00 AM</option>
+                        <option value="10:30 AM">10:30 AM (Recommended)</option>
+                        <option value="11:45 AM">11:45 AM</option>
+                        <option value="02:00 PM">02:00 PM</option>
+                        <option value="03:30 PM">03:30 PM</option>
+                        <option value="04:45 PM">04:45 PM</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Confirmation Language
+                      </label>
+                      <select
+                        value={bookingLang}
+                        onChange={e => setBookingLang(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900 cursor-pointer"
+                      >
+                        <option value="en">English (Default)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Clinic Department</label>
+                    <select
+                      value={bookingDept}
+                      onChange={e => setBookingDept(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900 cursor-pointer"
+                    >
+                      <option value="Cardiology Outpatient Clinic">Cardiology Outpatient Clinic</option>
+                      <option value="Endocrinology & Diabetic Care">Endocrinology & Diabetic Care</option>
+                      <option value="General & Laparoscopic Surgery">General & Laparoscopic Surgery</option>
+                      <option value="Nephrology & Renal Health">Nephrology & Renal Health</option>
+                      <option value="Orthopedic Surgical Recovery">Orthopedic Surgical Recovery</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Attending Specialist</label>
+                    <input
+                      type="text"
+                      value={bookingDoctor}
+                      onChange={e => setBookingDoctor(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900"
+                      placeholder="e.g. Dr. Rajesh Mehta"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Notes / Symptoms to Report (Optional)</label>
+                    <textarea
+                      rows={2}
+                      value={bookingNotes}
+                      onChange={e => setBookingNotes(e.target.value)}
+                      placeholder="e.g. Post-discharge medication check and lab review"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 focus:outline-hidden font-medium text-slate-900"
+                    />
+                  </div>
+
+                  <div className="bg-teal-50/60 border border-teal-200 p-3 rounded-xl flex items-start gap-2.5 text-[11px] text-teal-950">
+                    <Sparkles className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Automated Multilingual Confirmation:</strong> CareFlow will automatically trigger an appointment confirmation email in your chosen language ({bookingLang === 'ta' ? 'தமிழ்' : bookingLang === 'hi' ? 'हिन्दी' : 'English'}) immediately upon submission.
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => setIsBookingOpen(false)}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-xl font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Booking & Dispatching Email...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Confirm & Book Appointment</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </PatientLayout>
   );
 }
+
