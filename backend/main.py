@@ -688,26 +688,73 @@ class ApproveExtractionRequest(BaseModel):
     extraction: dict
     filename: Optional[str] = "Synthetic_Discharge_Summary.txt"
 
-def _execute_document_approval(db: Session, document: models.DischargeDocument, ext: Optional[models.DischargeExtraction], data: dict):
+class MatchExtractedPatientRequest(BaseModel):
+    mrn: Optional[str] = None
+    name: Optional[str] = None
+    dob: Optional[str] = None
+    gender: Optional[str] = None
+    contactPhone: Optional[str] = None
+    primaryDiagnosis: Optional[str] = None
+    department: Optional[str] = None
+
+class RegisterAndApproveRequest(BaseModel):
+    patient: dict
+    documentId: Optional[int] = None
+    filename: Optional[str] = "Synthetic_Discharge_Summary.txt"
+    extraction: dict
+
+class UpdateAndApproveRequest(BaseModel):
+    patientId: str
+    updatedFields: dict
+    documentId: Optional[int] = None
+    filename: Optional[str] = "Synthetic_Discharge_Summary.txt"
+    extraction: dict
+
+def _execute_document_approval(
+    db: Session, 
+    document: models.DischargeDocument, 
+    ext: Optional[models.DischargeExtraction], 
+    data: dict,
+    custom_patient_data: Optional[dict] = None,
+    updated_fields: Optional[dict] = None,
+    target_patient_id: Optional[str] = None
+):
     # 1. Extract Patient Information
     p_info = data.get("patientInfo") or {}
-    raw_mrn = p_info.get("mrn") or data.get("patient_mrn") or data.get("patientId") or document.patient_id or f"MRN-{uuid.uuid4().hex[:6].upper()}"
-    patient_mrn = raw_mrn.strip()
-    patient_name = p_info.get("name") or data.get("patient_name") or data.get("patientName") or "Arun Kumar"
-    dob = p_info.get("dob") or "1968-06-12"
-    gender = p_info.get("gender") or "Male"
-    primary_diag = p_info.get("primaryDiagnosis") or data.get("primary_diagnosis") or data.get("diagnosis") or "Acute Myocardial Infarction (Post-PCI)"
-    admission_date = p_info.get("admissionDate") or data.get("admission_date") or "01 Oct 2026"
-    discharge_date = p_info.get("dischargeDate") or data.get("discharge_date") or datetime.date.today().strftime("%d %b %Y")
-    attending = p_info.get("attendingPhysician") or data.get("attending_physician") or "Dr. Meera Patel"
-    contact_phone = p_info.get("contactPhone") or data.get("contact_phone") or "+919876543210"
     
-    # Determine priority level
-    has_review_flags = bool(data.get("needsReview") or data.get("needs_review") or document.needs_review)
-    priority_lvl = "immediate-review" if has_review_flags else (p_info.get("priorityLevel") or data.get("priority_level") or "high-priority")
+    if custom_patient_data:
+        patient_mrn = (custom_patient_data.get("id") or custom_patient_data.get("mrn") or f"MRN-{uuid.uuid4().hex[:6].upper()}").strip()
+        patient_name = custom_patient_data.get("name") or "Arun Kumar"
+        dob = custom_patient_data.get("dob") or "1968-06-12"
+        gender = custom_patient_data.get("gender") or "Male"
+        primary_diag = custom_patient_data.get("primaryDiagnosis") or custom_patient_data.get("primary_diagnosis") or "Acute Myocardial Infarction (Post-PCI)"
+        admission_date = custom_patient_data.get("admissionDate") or custom_patient_data.get("admission_date") or "01 Oct 2026"
+        discharge_date = custom_patient_data.get("dischargeDate") or custom_patient_data.get("discharge_date") or datetime.date.today().strftime("%d %b %Y")
+        attending = custom_patient_data.get("attendingPhysician") or custom_patient_data.get("attending_physician") or "Dr. Meera Patel"
+        contact_phone = custom_patient_data.get("contactPhone") or custom_patient_data.get("contact_phone") or "+919876543210"
+        priority_lvl = custom_patient_data.get("priorityLevel") or custom_patient_data.get("priority_level") or "high-priority"
+    else:
+        raw_mrn = target_patient_id or p_info.get("mrn") or data.get("patient_mrn") or data.get("patientId") or document.patient_id or f"MRN-{uuid.uuid4().hex[:6].upper()}"
+        patient_mrn = raw_mrn.strip()
+        patient_name = p_info.get("name") or data.get("patient_name") or data.get("patientName") or "Arun Kumar"
+        dob = p_info.get("dob") or "1968-06-12"
+        gender = p_info.get("gender") or "Male"
+        primary_diag = p_info.get("primaryDiagnosis") or data.get("primary_diagnosis") or data.get("diagnosis") or "Acute Myocardial Infarction (Post-PCI)"
+        admission_date = p_info.get("admissionDate") or data.get("admission_date") or "01 Oct 2026"
+        discharge_date = p_info.get("dischargeDate") or data.get("discharge_date") or datetime.date.today().strftime("%d %b %Y")
+        attending = p_info.get("attendingPhysician") or data.get("attending_physician") or "Dr. Meera Patel"
+        contact_phone = p_info.get("contactPhone") or data.get("contact_phone") or "+919876543210"
+        has_review_flags = bool(data.get("needsReview") or data.get("needs_review") or document.needs_review)
+        priority_lvl = "immediate-review" if has_review_flags else (p_info.get("priorityLevel") or data.get("priority_level") or "high-priority")
 
     # 2. Lookup or Create Patient in MySQL
-    patient = db.query(models.Patient).filter(func.upper(models.Patient.id) == patient_mrn.upper()).first()
+    lookup_id = target_patient_id or patient_mrn
+    patient = db.query(models.Patient).filter(func.upper(models.Patient.id) == lookup_id.upper()).first()
+    
+    if not patient and not target_patient_id:
+        # Fallback check by name if exact ID not found
+        patient = db.query(models.Patient).filter(func.lower(models.Patient.name) == patient_name.lower().strip()).first()
+
     if not patient:
         clean_email = f"{patient_mrn.lower().replace('-', '_')}@careflow.ai"
         user = db.query(models.User).filter(models.User.email == clean_email).first()
@@ -741,17 +788,41 @@ def _execute_document_approval(db: Session, document: models.DischargeDocument, 
         db.add(patient)
         db.flush()
     else:
-        # Update existing patient metadata
-        if patient_name and patient.name in ["Unknown", "UNKNOWN", ""]:
-            patient.name = patient_name
-        if primary_diag:
-            patient.primary_diagnosis = primary_diag
-        if discharge_date:
-            patient.discharge_date = discharge_date
-        if attending:
-            patient.attending_physician = attending
-        if priority_lvl:
-            patient.priority_level = priority_lvl
+        # Update existing patient metadata with approved fields
+        if updated_fields:
+            if "name" in updated_fields and updated_fields["name"]:
+                patient.name = updated_fields["name"]
+            if "primaryDiagnosis" in updated_fields and updated_fields["primaryDiagnosis"]:
+                patient.primary_diagnosis = updated_fields["primaryDiagnosis"]
+            elif "primary_diagnosis" in updated_fields and updated_fields["primary_diagnosis"]:
+                patient.primary_diagnosis = updated_fields["primary_diagnosis"]
+            if "dischargeDate" in updated_fields and updated_fields["dischargeDate"]:
+                patient.discharge_date = updated_fields["dischargeDate"]
+            elif "discharge_date" in updated_fields and updated_fields["discharge_date"]:
+                patient.discharge_date = updated_fields["discharge_date"]
+            if "attendingPhysician" in updated_fields and updated_fields["attendingPhysician"]:
+                patient.attending_physician = updated_fields["attendingPhysician"]
+            elif "attending_physician" in updated_fields and updated_fields["attending_physician"]:
+                patient.attending_physician = updated_fields["attending_physician"]
+            if "contactPhone" in updated_fields and updated_fields["contactPhone"]:
+                patient.contact_phone = updated_fields["contactPhone"]
+            elif "contact_phone" in updated_fields and updated_fields["contact_phone"]:
+                patient.contact_phone = updated_fields["contact_phone"]
+            if "priorityLevel" in updated_fields and updated_fields["priorityLevel"]:
+                patient.priority_level = updated_fields["priorityLevel"]
+            elif "priority_level" in updated_fields and updated_fields["priority_level"]:
+                patient.priority_level = updated_fields["priority_level"]
+        else:
+            if patient_name and patient.name in ["Unknown", "UNKNOWN", ""]:
+                patient.name = patient_name
+            if primary_diag:
+                patient.primary_diagnosis = primary_diag
+            if discharge_date:
+                patient.discharge_date = discharge_date
+            if attending:
+                patient.attending_physician = attending
+            if priority_lvl:
+                patient.priority_level = priority_lvl
         db.flush()
 
     # Update Document and Extraction associations
@@ -995,13 +1066,19 @@ def _execute_document_approval(db: Session, document: models.DischargeDocument, 
     db.commit()
 
     return {
-        "status": "success",
+        "status": "approved",
         "message": f"Successfully activated in MySQL! Created/linked patient {patient.name} ({patient.id}), {tasks_created} tasks, {appointments_created} appointments, and {tests_created} tests.",
         "documentId": document.id,
+        "document_id": document.id,
+        "patientId": patient.id,
         "patient_id": patient.id,
+        "patientName": patient.name,
         "patient_name": patient.name,
+        "tasksCreated": tasks_created,
         "tasks_created": tasks_created,
+        "appointmentsCreated": appointments_created,
         "appointments_created": appointments_created,
+        "testsCreated": tests_created,
         "tests_created": tests_created
     }
 
@@ -1041,12 +1118,10 @@ def approve_extraction(req: ApproveExtractionRequest, db: Session = Depends(get_
         
     import json
     filename = req.filename or "Direct_Extraction.txt"
-    p_info = data.get("patientInfo") or {}
-    raw_mrn = p_info.get("mrn") or data.get("patient_mrn") or data.get("patientId") or f"MRN-{uuid.uuid4().hex[:6].upper()}"
     
     # Create document record
     document = models.DischargeDocument(
-        patient_id=raw_mrn,
+        patient_id=None,
         original_filename=filename,
         file_path=os.path.join(UPLOAD_DIR, filename),
         status="processed",
@@ -1059,9 +1134,9 @@ def approve_extraction(req: ApproveExtractionRequest, db: Session = Depends(get_
     
     ext = models.DischargeExtraction(
         document_id=document.id,
-        patient_id=raw_mrn,
+        patient_id=None,
         structured_data=json.dumps(data),
-        extraction_status="extracted"
+        needs_review=False
     )
     db.add(ext)
     db.commit()
@@ -1072,6 +1147,173 @@ def approve_extraction(req: ApproveExtractionRequest, db: Session = Depends(get_
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database activation failed: {str(exc)}")
+
+def _format_patient_match(p: models.Patient, db: Session):
+    tasks_count = db.query(models.FollowUpTask).filter(models.FollowUpTask.patient_id == p.id).count()
+    appts_count = db.query(models.Appointment).filter(models.Appointment.patient_id == p.id).count()
+    tests_count = db.query(models.RequiredTest).filter(models.RequiredTest.patient_id == p.id).count()
+    return {
+        "id": p.id,
+        "mrn": p.id,
+        "name": p.name,
+        "dob": p.dob or "Not documented",
+        "gender": p.gender or "Not documented",
+        "primaryDiagnosis": p.primary_diagnosis or "Post-Discharge Recovery",
+        "department": p.attending_physician or "Cardiology",
+        "admissionDate": p.admission_date or "Not documented",
+        "dischargeDate": p.discharge_date or "Active in Care",
+        "attendingPhysician": p.attending_physician or "Dr. Meera Patel",
+        "contactPhone": p.contact_phone or "Not documented",
+        "priorityLevel": p.priority_level or "routine",
+        "activeTasksCount": tasks_count,
+        "appointmentsCount": appts_count,
+        "testsCount": tests_count
+    }
+
+@app.post("/api/doctor/patients/match-extracted")
+def match_extracted_patient(req: MatchExtractedPatientRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "doctor":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # 1. Authoritative MRN matching
+    if req.mrn and req.mrn.strip():
+        clean_mrn = req.mrn.strip().upper()
+        exact_matches = db.query(models.Patient).filter(func.upper(models.Patient.id) == clean_mrn).all()
+        if len(exact_matches) == 1:
+            return {"status": "existing", "patient": _format_patient_match(exact_matches[0], db)}
+        elif len(exact_matches) > 1:
+            return {"status": "ambiguous", "candidates": [_format_patient_match(p, db) for p in exact_matches]}
+
+    # 2. Name & Secondary Identifiers matching
+    if req.name and req.name.strip():
+        clean_name = req.name.strip().lower()
+        if clean_name not in ["patient", "unknown", "discharge summary"]:
+            name_matches = db.query(models.Patient).filter(func.lower(models.Patient.name) == clean_name).all()
+            if not name_matches and len(clean_name) > 3:
+                name_matches = db.query(models.Patient).filter(func.lower(models.Patient.name).contains(clean_name)).all()
+            
+            if len(name_matches) == 1:
+                return {"status": "existing", "patient": _format_patient_match(name_matches[0], db)}
+            elif len(name_matches) > 1:
+                return {"status": "ambiguous", "candidates": [_format_patient_match(p, db) for p in name_matches]}
+
+    # 3. No existing patient match
+    suggested_mrn = req.mrn.strip().upper() if (req.mrn and req.mrn.strip() and "UNKNOWN" not in req.mrn.upper()) else f"MRN-{uuid.uuid4().hex[:6].upper()}"
+    return {
+        "status": "new",
+        "patient": None,
+        "candidates": [],
+        "suggestedMrn": suggested_mrn,
+        "extractedDetails": {
+            "name": req.name or "",
+            "dob": req.dob or "",
+            "gender": req.gender or "",
+            "contactPhone": req.contactPhone or "",
+            "primaryDiagnosis": req.primaryDiagnosis or "",
+            "department": req.department or ""
+        }
+    }
+
+@app.post("/api/doctor/patients/register-and-approve")
+def register_and_approve(req: RegisterAndApproveRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "doctor":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    patient_data = req.patient
+    mrn = (patient_data.get("id") or patient_data.get("mrn") or f"MRN-{uuid.uuid4().hex[:6].upper()}").strip()
+    
+    # 1. Check or create DischargeDocument
+    document = None
+    if req.documentId:
+        document = db.query(models.DischargeDocument).filter(models.DischargeDocument.id == req.documentId).first()
+    
+    import json
+    if not document:
+        filename = req.filename or f"Discharge_Summary_{mrn}.txt"
+        document = models.DischargeDocument(
+            patient_id=None,
+            original_filename=filename,
+            file_path=os.path.join(UPLOAD_DIR, filename),
+            status="processed",
+            needs_review=False,
+            review_reason=None
+        )
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    
+    # 2. Save extraction record if needed
+    ext = db.query(models.DischargeExtraction).filter(models.DischargeExtraction.document_id == document.id).first()
+    if not ext:
+        ext = models.DischargeExtraction(
+            document_id=document.id,
+            patient_id=None,
+            structured_data=json.dumps(req.extraction),
+            needs_review=False
+        )
+        db.add(ext)
+        db.commit()
+        db.refresh(ext)
+    
+    # 3. Execute approval with custom patient data
+    try:
+        return _execute_document_approval(db, document, ext, req.extraction, custom_patient_data=patient_data)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Registration & activation failed: {str(exc)}")
+
+@app.post("/api/doctor/patients/update-and-approve")
+def update_and_approve(req: UpdateAndApproveRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "doctor":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    patient = db.query(models.Patient).filter(func.upper(models.Patient.id) == req.patientId.strip().upper()).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail=f"Existing patient '{req.patientId}' not found in database.")
+    
+    # 1. Check or create DischargeDocument
+    document = None
+    if req.documentId:
+        document = db.query(models.DischargeDocument).filter(models.DischargeDocument.id == req.documentId).first()
+    
+    import json
+    if not document:
+        filename = req.filename or f"Discharge_Summary_{patient.id}.txt"
+        document = models.DischargeDocument(
+            patient_id=patient.id,
+            original_filename=filename,
+            file_path=os.path.join(UPLOAD_DIR, filename),
+            status="processed",
+            needs_review=False,
+            review_reason=None
+        )
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    
+    # 2. Save extraction record if needed
+    ext = db.query(models.DischargeExtraction).filter(models.DischargeExtraction.document_id == document.id).first()
+    if not ext:
+        ext = models.DischargeExtraction(
+            document_id=document.id,
+            patient_id=patient.id,
+            structured_data=json.dumps(req.extraction),
+            needs_review=False
+        )
+        db.add(ext)
+        db.commit()
+        db.refresh(ext)
+    
+    # 3. Execute approval with updated fields
+    try:
+        return _execute_document_approval(
+            db, document, ext, req.extraction, 
+            updated_fields=req.updatedFields, 
+            target_patient_id=patient.id
+        )
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Update & activation failed: {str(exc)}")
 
 @app.post("/api/doctor/documents/{doc_id}/reject")
 def reject_document(doc_id: int, reason: Optional[str] = "Manual entry required", db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

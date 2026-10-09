@@ -31,11 +31,95 @@ export interface DocumentRecord {
   reviewReason: string | null;
 }
 
+export interface MatchedPatientInfo {
+  id: string;
+  mrn: string;
+  name: string;
+  dob: string;
+  gender: string;
+  primaryDiagnosis: string;
+  department: string;
+  admissionDate: string;
+  dischargeDate: string;
+  dischargeStatus?: string;
+  attendingPhysician: string;
+  contactPhone: string;
+  priorityLevel: string;
+  activeTasksCount: number;
+  appointmentsCount: number;
+  testsCount: number;
+}
+
+export interface PatientMatchResponse {
+  status: 'new' | 'existing' | 'ambiguous';
+  suggestedMrn?: string;
+  extractedDetails?: {
+    name?: string;
+    dob?: string;
+    gender?: string;
+    contactPhone?: string;
+    primaryDiagnosis?: string;
+    department?: string;
+  };
+  patient?: MatchedPatientInfo;
+  candidates?: MatchedPatientInfo[];
+}
+
 export interface DocumentDetailResponse extends DocumentRecord {
   extraction: Record<string, any>;
 }
 
 export const doctorService = {
+  matchExtractedPatient: async (query: {
+    mrn?: string | null;
+    name?: string | null;
+    dob?: string | null;
+    gender?: string | null;
+    contactPhone?: string | null;
+    primaryDiagnosis?: string | null;
+    department?: string | null;
+  }): Promise<PatientMatchResponse> => {
+    return await fetchJson<PatientMatchResponse>('/api/doctor/patients/match-extracted', {
+      method: 'POST',
+      body: JSON.stringify(query)
+    });
+  },
+
+  registerAndApprovePatient: async (payload: {
+    patient: {
+      id: string;
+      name: string;
+      dob?: string;
+      gender?: string;
+      contactPhone?: string;
+      primaryDiagnosis?: string;
+      admissionDate?: string;
+      dischargeDate?: string;
+      attendingPhysician?: string;
+      priorityLevel?: string;
+    };
+    documentId?: number | null;
+    filename?: string;
+    extraction: any;
+  }): Promise<any> => {
+    return await fetchJson<any>('/api/doctor/patients/register-and-approve', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  updateAndApprovePatient: async (payload: {
+    patientId: string;
+    updatedFields: Record<string, any>;
+    documentId?: number | null;
+    filename?: string;
+    extraction: any;
+  }): Promise<any> => {
+    return await fetchJson<any>('/api/doctor/patients/update-and-approve', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
   getStats: async (): Promise<DoctorStats> => {
     return await fetchJson<DoctorStats>('/api/doctor/stats');
   },

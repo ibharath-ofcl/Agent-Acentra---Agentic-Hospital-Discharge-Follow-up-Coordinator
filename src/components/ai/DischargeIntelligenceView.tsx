@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Brain, Users, Calendar, Pill, AlertOctagon, CheckCircle2,
   RefreshCw, CheckCheck, Info, FileSearch, HeartPulse, ClipboardCheck,
   ArrowRight, UploadCloud, ClipboardList, FileText, ShieldCheck, AlertTriangle,
-  Check, LayoutDashboard
+  Check, LayoutDashboard, UserPlus, GitCompare, UserCheck, X, Edit3, User,
+  Building2, Phone, Stethoscope, Clock
 } from 'lucide-react';
 import { geminiService } from '../../services/ai/geminiService';
-import { doctorService, type DocumentRecord } from '../../services/api/doctorService';
+import { 
+  doctorService, 
+  type DocumentRecord,
+  type PatientMatchResponse,
+  type MatchedPatientInfo
+} from '../../services/api/doctorService';
 import type { DischargeAnalysisResult } from '../../types';
 
 export const SYNTHETIC_PRESETS = [
@@ -142,6 +148,38 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
   const [documentsList, setDocumentsList] = useState<DocumentRecord[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
 
+  // Patient Identification & Matching Gate State
+  const [patientMatch, setPatientMatch] = useState<PatientMatchResponse | null>(null);
+  const [isMatchingPatient, setIsMatchingPatient] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<MatchedPatientInfo | null>(null);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showDiffModal, setShowDiffModal] = useState(false);
+
+  // Registration Form State (Case A)
+  const [registerForm, setRegisterForm] = useState({
+    id: '',
+    name: '',
+    dob: '',
+    gender: 'Male',
+    contactPhone: '',
+    primaryDiagnosis: '',
+    department: 'Cardiology',
+    admissionDate: '',
+    dischargeDate: '',
+    attendingPhysician: '',
+    priorityLevel: 'high-priority'
+  });
+
+  // Diff / Update Field Approval State (Case B)
+  const [approvedDiffFields, setApprovedDiffFields] = useState<Record<string, boolean>>({
+    primaryDiagnosis: true,
+    department: true,
+    dischargeDate: true,
+    attendingPhysician: true,
+    contactPhone: true,
+    priorityLevel: true
+  });
+
   const loadDocumentsList = useCallback(async () => {
     setIsLoadingDocs(true);
     try {
@@ -160,6 +198,47 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
     loadDocumentsList();
   }, [loadDocumentsList]);
 
+  const runPatientMatch = useCallback(async (result: DischargeAnalysisResult) => {
+    setIsMatchingPatient(true);
+    try {
+      const pInfo = result.patientInfo || {};
+      const match = await doctorService.matchExtractedPatient({
+        mrn: pInfo.mrn,
+        name: pInfo.name,
+        dob: pInfo.dob,
+        gender: pInfo.gender,
+        contactPhone: (pInfo as any).contactPhone,
+        primaryDiagnosis: pInfo.primaryDiagnosis,
+        department: (pInfo as any).department
+      });
+      setPatientMatch(match);
+      if (match.status === 'existing' && match.patient) {
+        setSelectedCandidate(match.patient);
+      } else if (match.status === 'new') {
+        setSelectedCandidate(null);
+        setRegisterForm({
+          id: match.suggestedMrn || pInfo.mrn || `MRN-${Math.floor(1000 + Math.random() * 9000)}`,
+          name: pInfo.name || '',
+          dob: pInfo.dob || '',
+          gender: pInfo.gender || 'Male',
+          contactPhone: (pInfo as any).contactPhone || '',
+          primaryDiagnosis: pInfo.primaryDiagnosis || '',
+          department: (pInfo as any).department || 'Cardiology',
+          admissionDate: pInfo.admissionDate || '',
+          dischargeDate: pInfo.dischargeDate || new Date().toISOString().split('T')[0],
+          attendingPhysician: pInfo.attendingPhysician || '',
+          priorityLevel: (result.needsReview && result.needsReview.length > 0) ? 'immediate-review' : 'high-priority'
+        });
+      } else if (match.status === 'ambiguous' && match.candidates && match.candidates.length > 0) {
+        setSelectedCandidate(null);
+      }
+    } catch (err: any) {
+      console.warn('Patient match query failed:', err);
+    } finally {
+      setIsMatchingPatient(false);
+    }
+  }, []);
+
   const handleSelectPreset = useCallback((preset: typeof SYNTHETIC_PRESETS[0]) => {
     setSelectedPresetId(preset.id);
     setDischargeText(preset.text);
@@ -169,6 +248,8 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
     setUploadedFileName(null);
     setUploadedDocId(null);
     setApprovalStatus('idle');
+    setPatientMatch(null);
+    setSelectedCandidate(null);
   }, []);
 
   const handleFileUpload = useCallback(async (file: File) => {
@@ -192,6 +273,8 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
     setUploadedFileName(file.name);
     setUploadedFileSize(file.size);
     setApprovalStatus('idle');
+    setPatientMatch(null);
+    setSelectedCandidate(null);
     setAnalysisStep('calling-gemini');
 
     try {
@@ -201,9 +284,11 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
       // Fetch the structured extraction
       const detail = await doctorService.getDocumentDetail(resp.document_id || resp.documentId);
       if (detail && detail.extraction) {
-        setAnalysisResult(detail.extraction as any);
+        const ext = detail.extraction as any;
+        setAnalysisResult(ext);
         setAnalysisStep('complete');
         onShowToast?.(`✓ Document uploaded & parsed with Gemini: ${file.name}`);
+        runPatientMatch(ext);
       } else {
         // Fallback to local text if text file
         const reader = new FileReader();
@@ -221,7 +306,7 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
     } finally {
       setIsUploading(false);
     }
-  }, [loadDocumentsList, onShowToast]);
+  }, [loadDocumentsList, onShowToast, runPatientMatch]);
 
   const handleSelectExistingDoc = useCallback(async (docId: number) => {
     setUploadedDocId(docId);
@@ -231,16 +316,18 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
       const detail = await doctorService.getDocumentDetail(docId);
       if (detail) {
         setUploadedFileName(detail.originalFilename);
-        setAnalysisResult(detail.extraction as any);
+        const ext = detail.extraction as any;
+        setAnalysisResult(ext);
         setApprovalStatus(detail.status === 'approved' ? 'approved' : detail.status === 'rejected' ? 'rejected' : 'idle');
         onShowToast?.(`Loaded extraction record for ${detail.originalFilename}`);
+        if (ext) runPatientMatch(ext);
       }
     } catch (err: any) {
       setAnalysisError(err.message || 'Failed to load document extraction');
     } finally {
       setIsAnalyzing(false);
     }
-  }, [onShowToast]);
+  }, [onShowToast, runPatientMatch]);
 
   const handleSyncToCarePlan = useCallback(() => {
     if (!analysisResult) return;
@@ -251,7 +338,92 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
     onShowToast?.(`✓ Synced ${apptCount} appointment(s), ${medCount} medication(s), and ${testCount} lab test(s) to Care Coordinator Queue.`);
   }, [analysisResult, onShowToast]);
 
+  const handleConfirmRegistration = useCallback(async () => {
+    if (!registerForm.name.trim() || !registerForm.id.trim()) {
+      setAnalysisError('Patient ID (MRN) and Patient Name are required for registration.');
+      return;
+    }
+    setApprovalStatus('approving');
+    try {
+      const res = await doctorService.registerAndApprovePatient({
+        patient: registerForm,
+        documentId: uploadedDocId,
+        filename: uploadedFileName || `Discharge_Summary_${registerForm.id}.txt`,
+        extraction: analysisResult
+      });
+      setShowRegisterModal(false);
+      setApprovalStatus('approved');
+      setSyncedToCarePlan(true);
+      onShowToast?.(`✓ Registered & Activated in MySQL! Patient ${registerForm.name} (${registerForm.id}) created.`);
+      loadDocumentsList();
+      onApproved?.(res);
+    } catch (err: any) {
+      setAnalysisError(err.message || 'Registration failed.');
+      setApprovalStatus('idle');
+    }
+  }, [registerForm, uploadedDocId, uploadedFileName, analysisResult, onShowToast, loadDocumentsList, onApproved]);
+
+  const handleConfirmExistingUpdate = useCallback(async () => {
+    const targetPt = selectedCandidate || patientMatch?.patient;
+    if (!targetPt) return;
+
+    const pInfo = analysisResult?.patientInfo || {};
+    const updatedFields: Record<string, any> = {};
+
+    if (approvedDiffFields.primaryDiagnosis && pInfo.primaryDiagnosis) {
+      updatedFields.primaryDiagnosis = pInfo.primaryDiagnosis;
+    }
+    if (approvedDiffFields.department && (pInfo as any).department) {
+      updatedFields.department = (pInfo as any).department;
+    }
+    if (approvedDiffFields.dischargeDate && pInfo.dischargeDate) {
+      updatedFields.dischargeDate = pInfo.dischargeDate;
+    }
+    if (approvedDiffFields.attendingPhysician && pInfo.attendingPhysician) {
+      updatedFields.attendingPhysician = pInfo.attendingPhysician;
+    }
+    if (approvedDiffFields.contactPhone && (pInfo as any).contactPhone) {
+      updatedFields.contactPhone = (pInfo as any).contactPhone;
+    }
+    if (approvedDiffFields.priorityLevel) {
+      updatedFields.priorityLevel = (analysisResult?.needsReview && analysisResult.needsReview.length > 0) ? 'immediate-review' : 'high-priority';
+    }
+
+    setApprovalStatus('approving');
+    try {
+      const res = await doctorService.updateAndApprovePatient({
+        patientId: targetPt.id,
+        updatedFields,
+        documentId: uploadedDocId,
+        filename: uploadedFileName || `Discharge_Summary_${targetPt.id}.txt`,
+        extraction: analysisResult
+      });
+      setShowDiffModal(false);
+      setApprovalStatus('approved');
+      setSyncedToCarePlan(true);
+      onShowToast?.(`✓ Updated & Synced to MySQL! Existing Patient ${targetPt.name} (${targetPt.id}) updated.`);
+      loadDocumentsList();
+      onApproved?.(res);
+    } catch (err: any) {
+      setAnalysisError(err.message || 'Update failed.');
+      setApprovalStatus('idle');
+    }
+  }, [selectedCandidate, patientMatch, analysisResult, approvedDiffFields, uploadedDocId, uploadedFileName, onShowToast, loadDocumentsList, onApproved]);
+
   const handleApproveDocument = useCallback(async () => {
+    if (patientMatch?.status === 'new') {
+      setShowRegisterModal(true);
+      return;
+    }
+    if (patientMatch?.status === 'existing') {
+      setShowDiffModal(true);
+      return;
+    }
+    if (patientMatch?.status === 'ambiguous') {
+      onShowToast?.('Please manually select or register a patient to proceed.');
+      return;
+    }
+
     setApprovalStatus('approving');
     try {
       let res;
@@ -274,7 +446,7 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
       setAnalysisError(err.message || 'Approval failed.');
       setApprovalStatus('idle');
     }
-  }, [uploadedDocId, analysisResult, uploadedFileName, handleSyncToCarePlan, loadDocumentsList, onShowToast, onApproved]);
+  }, [patientMatch, uploadedDocId, analysisResult, uploadedFileName, handleSyncToCarePlan, loadDocumentsList, onShowToast, onApproved]);
 
   const handleRejectDocument = useCallback(async () => {
     if (!uploadedDocId) return;
@@ -298,6 +470,8 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
     setAnalysisResult(null);
     setSyncedToCarePlan(false);
     setApprovalStatus('idle');
+    setPatientMatch(null);
+    setSelectedCandidate(null);
     setAnalysisStep('calling-gemini');
 
     const stepTimer1 = setTimeout(() => setAnalysisStep('evaluating-safety'), 600);
@@ -310,6 +484,7 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
       setAnalysisResult(result);
       setAnalysisStep('complete');
       onShowToast?.('✓ Discharge Intelligence extracted with Google Gemini API.');
+      runPatientMatch(result);
     } catch (err: any) {
       clearTimeout(stepTimer1);
       clearTimeout(stepTimer2);
@@ -318,7 +493,7 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
     } finally {
       setIsAnalyzing(false);
     }
-  }, [dischargeText, onShowToast]);
+  }, [dischargeText, onShowToast, runPatientMatch]);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto mt-4">
@@ -617,6 +792,206 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
                 )}
               </div>
 
+              {/* PATIENT IDENTIFICATION & VERIFICATION GATE (PHASE 2) */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-teal-700" />
+                    <h3 className="text-sm font-bold text-slate-900">Patient Identity & Record Matching Gate</h3>
+                  </div>
+                  {isMatchingPatient && (
+                    <span className="text-[11px] font-bold text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse border border-teal-200">
+                      <RefreshCw className="w-3 h-3 animate-spin" /> Querying MySQL Database...
+                    </span>
+                  )}
+                </div>
+
+                {/* CASE A: NEW PATIENT */}
+                {patientMatch?.status === 'new' && (
+                  <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-950 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <UserPlus className="w-5 h-5 text-blue-600 shrink-0" />
+                        <div>
+                          <h4 className="font-bold text-sm text-blue-900">No existing patient record found. Create a new patient record to continue.</h4>
+                          <p className="text-xs text-blue-800 mt-0.5">
+                            Extracted details do not match any existing patient in MySQL. Register this patient manually or confirm extracted details to create their record.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px] uppercase shrink-0">
+                        Case A: New Patient
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-white/80 p-2.5 rounded-lg border border-blue-100">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Suggested ID</span>
+                        <strong className="font-mono text-blue-900">{patientMatch.suggestedMrn || registerForm.id}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Extracted Name</span>
+                        <strong className="text-slate-900">{analysisResult.patientInfo?.name || 'Unspecified'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Department</span>
+                        <strong className="text-slate-900">{registerForm.department}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Discharge Date</span>
+                        <strong className="text-slate-900">{registerForm.dischargeDate}</strong>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        onClick={() => {
+                          setPatientMatch(null);
+                          onShowToast?.('Patient registration cancelled.');
+                        }}
+                        className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+                      >
+                        CANCEL
+                      </button>
+                      <button
+                        onClick={() => setShowRegisterModal(true)}
+                        className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>NEW PATIENT</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* CASE B: EXISTING PATIENT */}
+                {patientMatch?.status === 'existing' && (
+                  <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-950 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <div>
+                          <h4 className="font-bold text-sm text-emerald-900">Existing patient record found.</h4>
+                          <p className="text-xs text-emerald-800 mt-0.5">
+                            Authoritative match established in MySQL. Link this discharge document to the patient and update supported care records without duplicates.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase shrink-0">
+                        Case B: Existing Match
+                      </span>
+                    </div>
+
+                    {/* Matched Patient Info Card */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-white/80 p-3 rounded-lg border border-emerald-100">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Patient ID</span>
+                        <strong className="font-mono text-emerald-900 font-bold">{patientMatch.patient?.id}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Patient Name</span>
+                        <strong className="text-slate-900">{patientMatch.patient?.name}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Department</span>
+                        <strong className="text-slate-900">{patientMatch.patient?.department || 'Cardiology'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Discharge Status</span>
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-900">
+                          {patientMatch.patient?.dischargeStatus || 'Discharged'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        onClick={() => {
+                          setPatientMatch(null);
+                          onShowToast?.('Patient link cancelled.');
+                        }}
+                        className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+                      >
+                        CANCEL
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedCandidate(patientMatch.patient || null);
+                          setShowDiffModal(true);
+                        }}
+                        className="px-4 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <GitCompare className="w-3.5 h-3.5" />
+                        <span>EXISTING PATIENT</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* CASE C: AMBIGUOUS OR MULTIPLE MATCHES */}
+                {patientMatch?.status === 'ambiguous' && (
+                  <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-300 text-amber-950 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                        <div>
+                          <h4 className="font-bold text-sm text-amber-900">Multiple possible patient matches found. Manual verification required.</h4>
+                          <p className="text-xs text-amber-800 mt-0.5">
+                            Safety Gate: System will never automatically select or merge records when ambiguous candidates exist. Select the verified patient below or register as a new record.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-bold text-[10px] uppercase shrink-0">
+                        Case C: Ambiguous Match
+                      </span>
+                    </div>
+
+                    {/* Candidate selection list */}
+                    <div className="space-y-2">
+                      <span className="text-[11px] font-bold text-amber-900 block">Candidate Records Found in MySQL:</span>
+                      {patientMatch.candidates?.map((cand) => (
+                        <div key={cand.id} className="p-3 bg-white rounded-lg border border-amber-200 flex items-center justify-between gap-3">
+                          <div className="grid grid-cols-3 gap-3 text-xs flex-1">
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">MRN / ID</span>
+                              <strong className="font-mono text-slate-800">{cand.id}</strong>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Name</span>
+                              <strong className="text-slate-900">{cand.name}</strong>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Department</span>
+                              <span className="text-slate-700">{cand.department || 'General'}</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedCandidate(cand);
+                              setShowDiffModal(true);
+                            }}
+                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs cursor-pointer shrink-0"
+                          >
+                            Select Patient
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-amber-200 text-xs">
+                      <span className="text-amber-800 text-[11px]">None of these match?</span>
+                      <button
+                        onClick={() => setShowRegisterModal(true)}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Register as New Distinct Patient</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* SECTION TABS FILTER BAR */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
                 {[
@@ -761,7 +1136,7 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
                               <span className="font-bold text-slate-900 text-sm">{med.medicationName}</span>
                               {med.dosage && (
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white text-teal-800 border border-slate-200">
-                                  {med.dosage}
+                                   {med.dosage}
                                 </span>
                               )}
                             </div>
@@ -993,6 +1368,16 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
                           <RefreshCw className="w-4 h-4 animate-spin" />
                           <span>Persisting Tasks to DB...</span>
                         </>
+                      ) : patientMatch?.status === 'new' ? (
+                        <>
+                          <UserPlus className="w-4 h-4" />
+                          <span>NEW PATIENT & Activate</span>
+                        </>
+                      ) : patientMatch?.status === 'existing' ? (
+                        <>
+                          <GitCompare className="w-4 h-4" />
+                          <span>EXISTING PATIENT & Update</span>
+                        </>
                       ) : (
                         <>
                           <ArrowRight className="w-4 h-4" />
@@ -1007,6 +1392,356 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
           )}
         </div>
       </div>
+
+      {/* REGISTRATION MODAL (CASE A: NEW PATIENT) */}
+      <AnimatePresence>
+        {showRegisterModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-900 to-slate-900 text-white">
+                <div className="flex items-center gap-2.5">
+                  <UserPlus className="w-5 h-5 text-blue-400" />
+                  <div>
+                    <h3 className="text-base font-bold">Register New Patient in MySQL</h3>
+                    <p className="text-xs text-blue-200">Pre-filled with extracted clinical data. Review & confirm fields below.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowRegisterModal(false)}
+                  className="p-1 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Form Fields */}
+              <div className="p-6 overflow-y-auto space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Patient ID (MRN) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={registerForm.id}
+                      onChange={(e) => setRegisterForm({ ...registerForm, id: e.target.value })}
+                      placeholder="e.g. MRN-9281C"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs focus:border-blue-600 focus:outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Full Legal Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={registerForm.name}
+                      onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                      placeholder="e.g. Arun Kumar"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={registerForm.dob}
+                      onChange={(e) => setRegisterForm({ ...registerForm, dob: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Gender</label>
+                    <select
+                      value={registerForm.gender}
+                      onChange={(e) => setRegisterForm({ ...registerForm, gender: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden bg-white"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Contact Phone</label>
+                    <input
+                      type="tel"
+                      value={registerForm.contactPhone}
+                      onChange={(e) => setRegisterForm({ ...registerForm, contactPhone: e.target.value })}
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Department</label>
+                    <select
+                      value={registerForm.department}
+                      onChange={(e) => setRegisterForm({ ...registerForm, department: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden bg-white"
+                    >
+                      <option value="Cardiology">Cardiology</option>
+                      <option value="Orthopedics">Orthopedics</option>
+                      <option value="Neurology">Neurology</option>
+                      <option value="General Medicine">General Medicine</option>
+                      <option value="Surgery">Surgery</option>
+                      <option value="Pulmonology">Pulmonology</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Priority Risk Level</label>
+                    <select
+                      value={registerForm.priorityLevel}
+                      onChange={(e) => setRegisterForm({ ...registerForm, priorityLevel: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden bg-white"
+                    >
+                      <option value="stable">Stable / Standard Care</option>
+                      <option value="high-priority">High Priority</option>
+                      <option value="immediate-review">Immediate Review Required</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Primary Diagnosis</label>
+                  <textarea
+                    rows={2}
+                    value={registerForm.primaryDiagnosis}
+                    onChange={(e) => setRegisterForm({ ...registerForm, primaryDiagnosis: e.target.value })}
+                    placeholder="Enter confirmed diagnosis..."
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Discharge Date</label>
+                    <input
+                      type="date"
+                      value={registerForm.dischargeDate}
+                      onChange={(e) => setRegisterForm({ ...registerForm, dischargeDate: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Attending Physician</label>
+                    <input
+                      type="text"
+                      value={registerForm.attendingPhysician}
+                      onChange={(e) => setRegisterForm({ ...registerForm, attendingPhysician: e.target.value })}
+                      placeholder="e.g. Dr. Sarah Chen, MD"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500">
+                  Creating patient in MySQL will automatically link this discharge document and its care tasks.
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowRegisterModal(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmRegistration}
+                    disabled={approvalStatus === 'approving'}
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {approvalStatus === 'approving' ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Registering in MySQL...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Confirm Registration & Activate</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DIFF & UPDATE COMPARISON MODAL (CASE B: EXISTING PATIENT) */}
+      <AnimatePresence>
+        {showDiffModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-900 to-emerald-950 text-white">
+                <div className="flex items-center gap-2.5">
+                  <GitCompare className="w-5 h-5 text-emerald-400" />
+                  <div>
+                    <h3 className="text-base font-bold">Review & Update Existing Patient Record</h3>
+                    <p className="text-xs text-teal-200">
+                      Comparing MySQL Patient <strong>{selectedCandidate?.name || patientMatch?.patient?.name}</strong> ({selectedCandidate?.id || patientMatch?.patient?.id}) with new document data.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDiffModal(false)}
+                  className="p-1 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Comparison Table */}
+              <div className="p-6 overflow-y-auto space-y-4 text-xs">
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-900 text-xs">
+                  <ShieldCheck className="w-4 h-4 inline-block mr-1.5 text-emerald-600" />
+                  <strong>Zero-Data-Loss Rule:</strong> Verified existing patient details are preserved. Unchecked fields will remain untouched in MySQL. No duplicate appointments or tasks will be created.
+                </div>
+
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] bg-slate-50">
+                      <th className="py-2.5 px-3 text-left w-12">Update?</th>
+                      <th className="py-2.5 px-3 text-left w-36">Field</th>
+                      <th className="py-2.5 px-3 text-left">Current Database Value</th>
+                      <th className="py-2.5 px-3 text-left">New Document Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr>
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={approvedDiffFields.primaryDiagnosis}
+                          onChange={(e) => setApprovedDiffFields({ ...approvedDiffFields, primaryDiagnosis: e.target.checked })}
+                          className="w-4 h-4 text-teal-600 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-800">Primary Diagnosis</td>
+                      <td className="py-3 px-3 text-slate-500">{selectedCandidate?.primaryDiagnosis || patientMatch?.patient?.primaryDiagnosis || '—'}</td>
+                      <td className="py-3 px-3 font-medium text-teal-900 bg-teal-50/50">{analysisResult?.patientInfo?.primaryDiagnosis || '—'}</td>
+                    </tr>
+
+                    <tr>
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={approvedDiffFields.department}
+                          onChange={(e) => setApprovedDiffFields({ ...approvedDiffFields, department: e.target.checked })}
+                          className="w-4 h-4 text-teal-600 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-800">Department</td>
+                      <td className="py-3 px-3 text-slate-500">{selectedCandidate?.department || patientMatch?.patient?.department || '—'}</td>
+                      <td className="py-3 px-3 font-medium text-teal-900 bg-teal-50/50">{(analysisResult?.patientInfo as any)?.department || 'Cardiology'}</td>
+                    </tr>
+
+                    <tr>
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={approvedDiffFields.dischargeDate}
+                          onChange={(e) => setApprovedDiffFields({ ...approvedDiffFields, dischargeDate: e.target.checked })}
+                          className="w-4 h-4 text-teal-600 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-800">Discharge Date</td>
+                      <td className="py-3 px-3 text-slate-500">{selectedCandidate?.dischargeDate || patientMatch?.patient?.dischargeDate || '—'}</td>
+                      <td className="py-3 px-3 font-medium text-teal-900 bg-teal-50/50">{analysisResult?.patientInfo?.dischargeDate || '—'}</td>
+                    </tr>
+
+                    <tr>
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={approvedDiffFields.attendingPhysician}
+                          onChange={(e) => setApprovedDiffFields({ ...approvedDiffFields, attendingPhysician: e.target.checked })}
+                          className="w-4 h-4 text-teal-600 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-800">Attending Physician</td>
+                      <td className="py-3 px-3 text-slate-500">{selectedCandidate?.attendingPhysician || patientMatch?.patient?.attendingPhysician || '—'}</td>
+                      <td className="py-3 px-3 font-medium text-teal-900 bg-teal-50/50">{analysisResult?.patientInfo?.attendingPhysician || '—'}</td>
+                    </tr>
+
+                    <tr>
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={approvedDiffFields.contactPhone}
+                          onChange={(e) => setApprovedDiffFields({ ...approvedDiffFields, contactPhone: e.target.checked })}
+                          className="w-4 h-4 text-teal-600 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-800">Contact Phone</td>
+                      <td className="py-3 px-3 text-slate-500">{selectedCandidate?.contactPhone || patientMatch?.patient?.contactPhone || '—'}</td>
+                      <td className="py-3 px-3 font-medium text-teal-900 bg-teal-50/50">{(analysisResult?.patientInfo as any)?.contactPhone || selectedCandidate?.contactPhone || '—'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500">
+                  Approved care plan tasks and tests will be linked directly to {selectedCandidate?.id || patientMatch?.patient?.id}.
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowDiffModal(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmExistingUpdate}
+                    disabled={approvalStatus === 'approving'}
+                    className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {approvalStatus === 'approving' ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Updating MySQL...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Approve Updates & Sync</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* UPLOADED DOCUMENTS REGISTRY TABLE */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs mt-6">
@@ -1096,3 +1831,4 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
     </div>
   );
 });
+

@@ -121,7 +121,7 @@ EMERGENCY WARNING SIGNS:
     print(f"\n[Step 4] Calling 'Approve & Activate in MySQL' (POST /api/doctor/documents/{doc_id}/approve)...")
     appr_res = post_json(f"{BASE_URL}/api/doctor/documents/{doc_id}/approve", {}, token=doc_token)
     print(f"✓ Approval Result: {appr_res}")
-    assert appr_res["status"] == "success", f"Approval failed: {appr_res}"
+    assert appr_res["status"] in ["success", "approved"], f"Approval failed: {appr_res}"
     assert appr_res["patient_id"] == patient_mrn, f"Expected MRN {patient_mrn}, got {appr_res['patient_id']}"
 
     # 5. Verify Doctor Dashboard endpoints return newly approved patient & data
@@ -173,7 +173,7 @@ EMERGENCY WARNING SIGNS:
     # 7. Test Duplicate Prevention (Re-approving document)
     print(f"\n[Step 7] Re-approving document to verify duplicate prevention...")
     appr_res2 = post_json(f"{BASE_URL}/api/doctor/documents/{doc_id}/approve", {}, token=doc_token)
-    assert appr_res2["status"] == "success"
+    assert appr_res2["status"] in ["success", "approved"]
     
     patients_after = get_json(f"{BASE_URL}/api/doctor/patients", token=doc_token)
     matched_after = [p for p in patients_after if p["id"] == patient_mrn]
