@@ -4,27 +4,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, CalendarClock, ListTodo, Stethoscope, ClipboardList,
   History, BellRing, HelpCircle, Globe, LogOut, Menu, X, CheckCircle2,
-  UserCheck, ShieldCheck, HeartPulse
+  HeartPulse
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage, type SupportedLanguage } from '../../context/LanguageContext';
 
 interface PatientLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
   toastMessage?: string | null;
-  onLanguageChange?: (lang: 'English' | 'Tamil' | 'Hindi') => void;
-  selectedLanguage?: 'English' | 'Tamil' | 'Hindi';
+  onLanguageChange?: (lang: SupportedLanguage) => void;
+  selectedLanguage?: SupportedLanguage;
 }
 
 export const PATIENT_NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', path: '/patient', icon: Activity },
-  { id: 'followup', label: 'My Follow-ups', path: '/patient/follow-ups', icon: ListTodo, badge: '3' },
-  { id: 'tasks', label: 'Upcoming Tasks', path: '/patient/tasks', icon: CalendarClock, badge: '4' },
-  { id: 'tests-referrals', label: 'Tests & Referrals', path: '/patient/tests-referrals', icon: Stethoscope, badge: '2' },
-  { id: 'instructions', label: 'Care Instructions', path: '/patient/care-instructions', icon: ClipboardList },
-  { id: 'timeline', label: 'Timeline', path: '/patient/timeline', icon: History },
-  { id: 'reminders', label: 'Reminders', path: '/patient/reminders', icon: BellRing },
-  { id: 'help', label: 'Help / Human Review', path: '/patient/help', icon: HelpCircle },
+  { id: 'dashboard', labelKey: 'nav.dashboard', defaultLabel: 'Dashboard', path: '/patient', icon: Activity },
+  { id: 'followup', labelKey: 'nav.followups', defaultLabel: 'My Follow-ups', path: '/patient/follow-ups', icon: ListTodo, badge: '3' },
+  { id: 'tasks', labelKey: 'nav.tasks', defaultLabel: 'Upcoming Tasks', path: '/patient/tasks', icon: CalendarClock, badge: '4' },
+  { id: 'tests-referrals', labelKey: 'nav.tests', defaultLabel: 'Tests & Referrals', path: '/patient/tests-referrals', icon: Stethoscope, badge: '2' },
+  { id: 'instructions', labelKey: 'nav.instructions', defaultLabel: 'Care Instructions', path: '/patient/care-instructions', icon: ClipboardList },
+  { id: 'timeline', labelKey: 'nav.timeline', defaultLabel: 'Timeline', path: '/patient/timeline', icon: History },
+  { id: 'reminders', labelKey: 'nav.reminders', defaultLabel: 'Reminders', path: '/patient/reminders', icon: BellRing },
+  { id: 'help', labelKey: 'nav.help', defaultLabel: 'Help / Human Review', path: '/patient/help', icon: HelpCircle },
 ];
 
 export function PatientLayout({
@@ -32,21 +33,20 @@ export function PatientLayout({
   activeTab,
   toastMessage,
   onLanguageChange,
-  selectedLanguage = 'English',
 }: PatientLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentLang, setCurrentLang] = useState<'English' | 'Tamil' | 'Hindi'>(selectedLanguage);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const handleLangSelect = (lang: 'English' | 'Tamil' | 'Hindi') => {
-    setCurrentLang(lang);
+  const handleLangSelect = (lang: SupportedLanguage) => {
+    setLanguage(lang);
     if (onLanguageChange) onLanguageChange(lang);
   };
 
@@ -95,7 +95,7 @@ export function PatientLayout({
         <div className="px-5 py-3 border-b border-[#0e4851]">
           <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Role</div>
           <div className="text-xs font-bold text-[#00e575] flex items-center gap-1.5">
-            <HeartPulse className="w-3.5 h-3.5" /> Patient Recovery Portal
+            <HeartPulse className="w-3.5 h-3.5" /> {t('nav.patient_portal', 'Patient Recovery Portal')}
           </div>
         </div>
 
@@ -114,7 +114,7 @@ export function PatientLayout({
               >
                 <div className="flex items-center gap-2.5 truncate">
                   <item.icon className={`w-4 h-4 shrink-0 ${active ? 'text-[#052429]' : 'text-slate-300'}`} />
-                  <span className="truncate">{item.label}</span>
+                  <span className="truncate">{t(item.labelKey, item.defaultLabel)}</span>
                 </div>
                 {item.badge && (
                   <span
@@ -137,9 +137,9 @@ export function PatientLayout({
           <div className="flex items-center gap-2 mb-2 bg-[#072d33] border border-[#0e4851] px-2.5 py-1.5 rounded-xl text-xs w-full">
             <Globe className="w-4 h-4 text-[#00e575] shrink-0" />
             <select
-              value={currentLang}
+              value={language}
               aria-label="Select language"
-              onChange={(e) => handleLangSelect(e.target.value as any)}
+              onChange={(e) => handleLangSelect(e.target.value as SupportedLanguage)}
               className="bg-transparent text-slate-200 text-xs focus:outline-hidden cursor-pointer font-medium w-full"
             >
               <option value="English" className="bg-[#052429] text-white">English</option>
@@ -161,13 +161,13 @@ export function PatientLayout({
             to="/doctor"
             className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-[#00e575] bg-[#072d33] hover:bg-[#0a383f] border border-[#0e4851] rounded-lg transition-colors cursor-pointer"
           >
-            <Stethoscope className="w-3.5 h-3.5" /> Doctor / Coordinator View
+            <Stethoscope className="w-3.5 h-3.5" /> {t('nav.doctor_view', 'Doctor / Coordinator View')}
           </Link>
           <button
             onClick={handleLogout}
             className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-slate-300 bg-transparent hover:bg-red-950/40 hover:text-red-400 border border-transparent rounded-lg transition-colors cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" /> Sign Out
+            <LogOut className="w-3.5 h-3.5" /> {t('nav.sign_out', 'Sign Out')}
           </button>
         </div>
       </aside>
@@ -195,7 +195,7 @@ export function PatientLayout({
           </div>
           <div className="flex items-center gap-2">
             <Link to="/doctor" className="text-[11px] font-bold text-[#00e575] bg-[#072d33] px-2.5 py-1 rounded border border-[#0e4851]">
-              Doctor View
+              Doctor
             </Link>
             <button onClick={handleLogout} className="p-1.5 text-slate-300 hover:text-red-400" aria-label="Sign out">
               <LogOut className="w-5 h-5" />
@@ -222,11 +222,29 @@ export function PatientLayout({
                 className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#052429] border-r border-[#0e4851] flex flex-col"
               >
                 <div className="h-16 flex items-center justify-between px-5 border-b border-[#0e4851]">
-                  <span className="font-bold text-base tracking-tight text-white">Patient Portal Menu</span>
+                  <span className="font-bold text-base tracking-tight text-white">{t('nav.patient_portal', 'Patient Recovery Portal')}</span>
                   <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 text-slate-300 hover:text-white" aria-label="Close menu">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+                
+                {/* Mobile Language Selector */}
+                <div className="p-3 border-b border-[#0e4851]">
+                  <div className="flex items-center gap-2 bg-[#072d33] border border-[#0e4851] px-2.5 py-1.5 rounded-xl text-xs w-full">
+                    <Globe className="w-4 h-4 text-[#00e575] shrink-0" />
+                    <select
+                      value={language}
+                      aria-label="Select language"
+                      onChange={(e) => handleLangSelect(e.target.value as SupportedLanguage)}
+                      className="bg-transparent text-slate-200 text-xs focus:outline-hidden cursor-pointer font-medium w-full"
+                    >
+                      <option value="English" className="bg-[#052429] text-white">English</option>
+                      <option value="Tamil" className="bg-[#052429] text-white">தமிழ் (Tamil)</option>
+                      <option value="Hindi" className="bg-[#052429] text-white">हिन्दी (Hindi)</option>
+                    </select>
+                  </div>
+                </div>
+
                 <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                   {PATIENT_NAV_ITEMS.map((item) => {
                     const active = isCurrentActive(item);
@@ -243,7 +261,7 @@ export function PatientLayout({
                       >
                         <div className="flex items-center gap-3">
                           <item.icon className="w-4 h-4 shrink-0" />
-                          <span>{item.label}</span>
+                          <span>{t(item.labelKey, item.defaultLabel)}</span>
                         </div>
                         {item.badge && (
                           <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-[#0e4851] text-teal-300">
@@ -259,7 +277,7 @@ export function PatientLayout({
                     onClick={handleLogout}
                     className="flex items-center justify-center w-full gap-2 px-3 py-2 text-xs font-bold text-red-400 bg-red-950/30 rounded-lg"
                   >
-                    <LogOut className="w-3.5 h-3.5" /> Sign Out
+                    <LogOut className="w-3.5 h-3.5" /> {t('nav.sign_out', 'Sign Out')}
                   </button>
                 </div>
               </motion.div>
@@ -275,3 +293,4 @@ export function PatientLayout({
     </div>
   );
 }
+

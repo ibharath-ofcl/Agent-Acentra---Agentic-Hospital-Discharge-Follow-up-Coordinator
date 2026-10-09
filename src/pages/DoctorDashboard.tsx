@@ -7,13 +7,15 @@ import {
   UploadCloud, LayoutDashboard, ListTodo, CalendarClock, ClipboardList, History,
   BellRing, HelpCircle, Sparkles, Brain, Stethoscope, Pill, AlertOctagon,
   CheckSquare, Eye, Send, ChevronRight, CheckCheck, Info, FileSearch,
-  HeartPulse, FileCheck, Layers, ClipboardCheck, ArrowUpRight, Copy
+  HeartPulse, FileCheck, Layers, ClipboardCheck, ArrowUpRight, Copy, UserPlus
 } from 'lucide-react';
 import {
   StatusBadge,
   CareCoordinationPriorityBadge,
 } from '../components/common/StatusBadge';
 import { DischargeIntelligenceView } from '../components/ai/DischargeIntelligenceView';
+import { PatientRegistrationModal } from '../components/common/PatientRegistrationModal';
+import { CentralizedPatientProfileModal } from '../components/common/CentralizedPatientProfileModal';
 import { useAuth } from '../hooks/useAuth';
 import { doctorService } from '../services/api/doctorService';
 import { geminiService } from '../services/ai/geminiService';
@@ -117,6 +119,22 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   }, []);
+
+  // Patient Registration & Centralized Profile Modal States
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [selectedProfilePatientId, setSelectedProfilePatientId] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const handleOpenPatientProfile = useCallback((patientId: string) => {
+    setSelectedProfilePatientId(patientId);
+    setIsProfileModalOpen(true);
+  }, []);
+
+  const handlePatientRegistered = useCallback((newPatientId: string) => {
+    loadDashboardData();
+    showToast(`Patient successfully registered in MySQL (${newPatientId})`);
+    handleOpenPatientProfile(newPatientId);
+  }, [loadDashboardData, showToast, handleOpenPatientProfile]);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -342,10 +360,21 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
             </p>
           </div>
 
-          {/* Safety Rule Banner */}
-          <div className="bg-[#e6fcf1] border border-[#a7f3d0] px-3.5 py-2 rounded-xl text-xs text-[#052429] flex items-center gap-2 font-medium">
-            <ShieldCheck className="w-4 h-4 text-[#008742] shrink-0" />
-            <span>Care Coordination Priority based on documented timelines — Zero autonomous clinical diagnosis.</span>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Register New Patient Button */}
+            <button
+              onClick={() => setIsRegisterModalOpen(true)}
+              className="px-4 py-2 text-xs font-bold text-[#052429] bg-[#00e575] hover:bg-[#00cb68] rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer font-mono"
+            >
+              <UserPlus className="w-4 h-4 stroke-[2.5]" />
+              Register New Patient
+            </button>
+
+            {/* Safety Rule Banner */}
+            <div className="bg-[#e6fcf1] border border-[#a7f3d0] px-3.5 py-2 rounded-xl text-xs text-[#052429] flex items-center gap-2 font-medium">
+              <ShieldCheck className="w-4 h-4 text-[#008742] shrink-0" />
+              <span className="hidden sm:inline">Zero autonomous clinical diagnosis.</span>
+            </div>
           </div>
         </div>
 
@@ -626,6 +655,15 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
 
             {/* Search & Filters */}
             <div className="flex flex-wrap items-center gap-2.5">
+              {/* Register New Patient Action */}
+              <button
+                onClick={() => setIsRegisterModalOpen(true)}
+                className="px-3 py-2 text-xs font-bold text-[#052429] bg-[#00e575] hover:bg-[#00cb68] rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>+ Register Patient</span>
+              </button>
+
               {/* Search */}
               <div className="relative w-full sm:w-56">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -633,7 +671,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter patient name, MRN, dept..."
+                  placeholder="Filter name, MRN, phone, dept..."
                   className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#00e575] focus:ring-1 focus:ring-[#00e575]"
                 />
               </div>
@@ -677,7 +715,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                   <th className="py-3 px-4 font-bold">Next Follow-up & Due</th>
                   <th className="py-3 px-4 font-bold">Priority</th>
                   <th className="py-3 px-4 font-bold">Status</th>
-                  <th className="py-3 px-4 font-bold text-right">Action</th>
+                  <th className="py-3 px-4 font-bold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -696,10 +734,18 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                     <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                       {/* Patient & Department */}
                       <td className="py-3.5 px-4 align-middle">
-                        <div className="font-bold text-slate-900">{item.patientName || item.name}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">
-                          ID: <span className="font-semibold text-slate-700">{item.patientId || item.id}</span> • Dept: <span className="text-teal-700 font-medium">{item.department || 'Cardiology'}</span>
-                        </div>
+                        <button
+                          onClick={() => handleOpenPatientProfile(item.patientId || item.id)}
+                          className="text-left group cursor-pointer"
+                        >
+                          <div className="font-bold text-slate-900 group-hover:text-teal-700 transition-colors flex items-center gap-1">
+                            <span>{item.patientName || item.name}</span>
+                            <ArrowUpRight className="w-3 h-3 text-teal-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono">
+                            ID: <span className="font-semibold text-slate-700">{item.patientId || item.id}</span> • Dept: <span className="text-teal-700 font-medium">{item.department || 'Cardiology'}</span>
+                          </div>
+                        </button>
                       </td>
 
                       {/* Primary Diagnosis & Discharge */}
@@ -727,18 +773,26 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                         <StatusBadge status={item.status} size="sm" />
                       </td>
 
-                      {/* Action */}
+                      {/* Actions */}
                       <td className="py-3.5 px-4 align-middle text-right whitespace-nowrap">
-                        <button
-                          onClick={() => handlePriorityAction(item)}
-                          className={`min-w-[110px] inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
-                            item.level === 'immediate-review'
-                              ? 'bg-red-600 hover:bg-red-700 text-white shadow-xs'
-                              : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200'
-                          }`}
-                        >
-                          {item.actionLabel || 'View'}
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenPatientProfile(item.patientId || item.id)}
+                            className="px-2.5 py-1.5 text-xs font-semibold text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors cursor-pointer"
+                          >
+                            360° Profile
+                          </button>
+                          <button
+                            onClick={() => handlePriorityAction(item)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
+                              item.level === 'immediate-review'
+                                ? 'bg-red-600 hover:bg-red-700 text-white shadow-xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                            }`}
+                          >
+                            {item.actionLabel || 'Triage'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -752,128 +806,368 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
         {/* ========================================================
             SECTION 9 & 11: UPCOMING, OVERDUE & AI REMINDER ACTIVITY
             ======================================================== */}
-        {(activeNav === 'dashboard' || activeNav === 'reminders' || activeNav === 'timeline' || activeNav === 'followup') && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-          {/* SECTION 9: OVERDUE FOLLOW-UPS */}
-          <div className="bg-red-50/60 rounded-xl border border-red-200 p-6 shadow-xs h-full flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-red-200 mb-4">
-                <h3 className="text-xs font-extrabold text-red-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <ClockAlert className="w-4 h-4 text-red-600" /> OVERDUE FOLLOW-UPS
-                </h3>
-                <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full border border-red-300">
-                  Lapsed Deadline
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {overdueItems.map((od) => (
-                  <div key={od.id} className="p-4 bg-white rounded-xl border border-red-200 text-xs shadow-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-red-900 text-sm">{od.patientName}</span>
-                      <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
-                        {od.daysOverdue} day overdue
-                      </span>
-                    </div>
-                    <div className="mt-1 text-slate-800 font-semibold">{od.taskTitle}</div>
-                    <div className="text-slate-600 mt-0.5">Due: <strong className="text-red-700">{od.dueDate}</strong></div>
-                    <div className="text-[11px] text-slate-500 mt-1">Attending: {od.attending} • {od.contactPhone}</div>
-
-                    <button
-                      onClick={() => {
-                        setToastMessage(`Coordinator task opened for ${od.patientName}`);
-                        setTimeout(() => setToastMessage(null), 3000);
-                      }}
-                      className="mt-3 w-full py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs cursor-pointer"
-                    >
-                      Initiate Care Outreach
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-red-200 text-[11px] text-red-800">
-              Immediate coordination required for high-risk patients
-            </div>
-          </div>
-
-          {/* SECTION 9: UPCOMING DEADLINES */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-3 border-b border-slate-100 flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-teal-800" /> Upcoming Deadlines
-              </h3>
-
-              <div className="space-y-3">
-                {overdueItems.map((ud) => (
-                  <div key={ud.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900">{ud.patientName}</span>
-                      <span className="text-[11px] text-slate-600 font-mono">{ud.dueDate}</span>
-                    </div>
-                    <div className="text-slate-700 font-medium mt-0.5">{ud.taskTitle}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">Specialty: {ud.specialty}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
-              Timeline monitored continuously against hospital protocol
-            </div>
-          </div>
-
-          {/* SECTION 11: AI REMINDER ACTIVITY PANEL */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <PhoneCall className="w-4 h-4 text-teal-800" /> AI Reminder Simulation
-                </h3>
-                <span className="text-[10px] text-teal-800 bg-teal-50 px-2 py-0.5 rounded font-semibold border border-teal-200">
-                  Informational
-                </span>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                <div className="flex items-center justify-between font-bold text-slate-900">
-                  <span>{(priorityList[0]?.patientName || 'Loading...')}</span>
-                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                    {('Upcoming')}
+        {/* ========================================================
+            DASHBOARD VIEW: OVERDUE, DEADLINES & AI REMINDER SUMMARY
+            ======================================================== */}
+        {(activeNav === 'dashboard' || activeNav === 'followup') && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mb-8">
+            {/* SECTION 9: OVERDUE FOLLOW-UPS */}
+            <div className="bg-red-50/60 rounded-xl border border-red-200 p-6 shadow-xs h-full flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-red-200 mb-4">
+                  <h3 className="text-xs font-extrabold text-red-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <ClockAlert className="w-4 h-4 text-red-600" /> OVERDUE FOLLOW-UPS
+                  </h3>
+                  <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full border border-red-300">
+                    Lapsed Deadline
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-600 mt-1">
-                  <strong>Scheduled:</strong> {('Today, 2:00 PM')}
-                </p>
-                <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                  <strong>Purpose:</strong> {('Post-discharge routine check')}
-                </p>
 
-                {/* Simulation Sequence */}
-                <div className="mt-3 pt-2 border-t border-slate-200 space-y-1 text-[11px] text-slate-600 font-mono">
-                  <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
-                    <span>Attempt 1 — No answer</span>
-                    <span className="text-amber-600 font-bold">Recorded</span>
-                  </div>
-                  <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
-                    <span>Attempt 2 — Scheduled</span>
-                    <span className="text-teal-700 font-bold">In 30m</span>
-                  </div>
-                  <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
-                    <span>SMS fallback — Pending</span>
-                    <span className="text-slate-400">Queued</span>
-                  </div>
+                <div className="space-y-3">
+                  {overdueItems.map((od) => (
+                    <div key={od.id} className="p-4 bg-white rounded-xl border border-red-200 text-xs shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-red-900 text-sm">{od.patientName}</span>
+                        <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                          {od.daysOverdue} day overdue
+                        </span>
+                      </div>
+                      <div className="mt-1 text-slate-800 font-semibold">{od.taskTitle}</div>
+                      <div className="text-slate-600 mt-0.5">Due: <strong className="text-red-700">{od.dueDate}</strong></div>
+                      <div className="text-[11px] text-slate-500 mt-1">Attending: {od.attending} • {od.contactPhone}</div>
+
+                      <button
+                        onClick={() => {
+                          setToastMessage(`Coordinator task opened for ${od.patientName}`);
+                          setTimeout(() => setToastMessage(null), 3000);
+                        }}
+                        className="mt-3 w-full py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs cursor-pointer"
+                      >
+                        Initiate Care Outreach
+                      </button>
+                    </div>
+                  ))}
                 </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-red-200 text-[11px] text-red-800">
+                Immediate coordination required for high-risk patients
               </div>
             </div>
 
-            <div className="mt-3 text-[11px] text-slate-500 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Safety Boundary: Never provides clinical advice.</span>
+            {/* SECTION 9: UPCOMING DEADLINES */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-3 border-b border-slate-100 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-teal-800" /> Upcoming Deadlines
+                </h3>
+
+                <div className="space-y-3">
+                  {overdueItems.map((ud) => (
+                    <div key={ud.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">{ud.patientName}</span>
+                        <span className="text-[11px] text-slate-600 font-mono">{ud.dueDate}</span>
+                      </div>
+                      <div className="text-slate-700 font-medium mt-0.5">{ud.taskTitle}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">Specialty: {ud.specialty}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+                Timeline monitored continuously against hospital protocol
+              </div>
+            </div>
+
+            {/* SECTION 11: AI REMINDER ACTIVITY PANEL */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs h-full flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <PhoneCall className="w-4 h-4 text-teal-800" /> AI Reminder Simulation
+                  </h3>
+                  <span className="text-[10px] text-teal-800 bg-teal-50 px-2 py-0.5 rounded font-semibold border border-teal-200">
+                    Informational
+                  </span>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                  <div className="flex items-center justify-between font-bold text-slate-900">
+                    <span>{(priorityList[0]?.patientName || 'Loading...')}</span>
+                    <span className="text-[10px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      {('Upcoming')}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-1">
+                    <strong>Scheduled:</strong> {('Today, 2:00 PM')}
+                  </p>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                    <strong>Purpose:</strong> {('Post-discharge routine check')}
+                  </p>
+
+                  {/* Simulation Sequence */}
+                  <div className="mt-3 pt-2 border-t border-slate-200 space-y-1 text-[11px] text-slate-600 font-mono">
+                    <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+                      <span>Attempt 1 — No answer</span>
+                      <span className="text-amber-600 font-bold">Recorded</span>
+                    </div>
+                    <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+                      <span>Attempt 2 — Scheduled</span>
+                      <span className="text-teal-700 font-bold">In 30m</span>
+                    </div>
+                    <div className="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200">
+                      <span>SMS fallback — Pending</span>
+                      <span className="text-slate-400">Queued</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 text-[11px] text-slate-500 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Safety Boundary: Never provides clinical advice.</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* ========================================================
+            DEDICATED VIEW 1: TIMELINE & CLINICAL AUDIT LOG
+            ======================================================== */}
+        {activeNav === 'timeline' && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 md:p-8 mb-8 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-teal-800 text-white flex items-center justify-center font-bold">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">
+                    Hospital Care Coordination Timeline & Audit Log
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Chronological trail of hospital discharge orders, clinical reviews, lab completions, and automated patient touchpoints.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-teal-800 bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  Immutable Audit Trail
+                </span>
+              </div>
+            </div>
+
+            {/* Audit Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Tracked Milestones</span>
+                <div className="text-xl font-extrabold text-slate-900 mt-1">100% In Compliance</div>
+                <span className="text-[11px] text-emerald-700 font-medium">0 Missed Critical Milestones</span>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Verification Engine</span>
+                <div className="text-xl font-extrabold text-teal-800 mt-1">CareFlow Deterministic</div>
+                <span className="text-[11px] text-slate-600 font-medium">Synced with Hospital MySQL DB</span>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Active Cohort Horizon</span>
+                <div className="text-xl font-extrabold text-slate-900 mt-1">T+0 to T+30 Days</div>
+                <span className="text-[11px] text-teal-700 font-medium">{priorityList.length} Active Monitored Patients</span>
+              </div>
+            </div>
+
+            {/* Audit Log Stream Table */}
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-[10px] font-bold">
+                    <th className="py-3 px-4">Event & Horizon</th>
+                    <th className="py-3 px-4">Patient / MRN</th>
+                    <th className="py-3 px-4">Clinical Milestone & Action</th>
+                    <th className="py-3 px-4">Verification Entity</th>
+                    <th className="py-3 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-mono text-slate-700">Today • 10:15 AM (T+48h)</td>
+                    <td className="py-3 px-4 font-semibold text-slate-900">Arun Patel <span className="text-[10px] font-mono text-slate-400 block">MRN-2024-001</span></td>
+                    <td className="py-3 px-4 text-slate-700">Telephone Nurse Follow-up & Vitals Verification completed</td>
+                    <td className="py-3 px-4 text-slate-600">Nurse Coordinator Sarah Jenkins</td>
+                    <td className="py-3 px-4"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Verified Complete</span></td>
+                  </tr>
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-mono text-slate-700">Today • 09:30 AM (T+24h)</td>
+                    <td className="py-3 px-4 font-semibold text-slate-900">Ravi Kumar <span className="text-[10px] font-mono text-slate-400 block">MRN-RAVI-001</span></td>
+                    <td className="py-3 px-4 text-slate-700">Pre-appointment Email Confirmation dispatched to patient email</td>
+                    <td className="py-3 px-4 text-slate-600">CareFlow Automated Service</td>
+                    <td className="py-3 px-4"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-300">Email Dispatched</span></td>
+                  </tr>
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-mono text-slate-700">Yesterday • 04:00 PM (T+0)</td>
+                    <td className="py-3 px-4 font-semibold text-slate-900">Priya Sharma <span className="text-[10px] font-mono text-slate-400 block">MRN-1001</span></td>
+                    <td className="py-3 px-4 text-slate-700">Hospital Discharge Summary approved & medications reconciled</td>
+                    <td className="py-3 px-4 text-slate-600">Dr. Rajesh Mehta (Cardiology)</td>
+                    <td className="py-3 px-4"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Discharge Cleared</span></td>
+                  </tr>
+                  <tr className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-mono text-slate-700">07 Oct 2026 • 11:00 AM</td>
+                    <td className="py-3 px-4 font-semibold text-slate-900">Anita Desai <span className="text-[10px] font-mono text-slate-400 block">MRN-1004</span></td>
+                    <td className="py-3 px-4 text-slate-700">Post-Op Wound Inspection scheduled in Orthopedics Clinic</td>
+                    <td className="py-3 px-4 text-slate-600">Dr. Sunita Rao</td>
+                    <td className="py-3 px-4"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">Scheduled</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            DEDICATED VIEW 2: MULTI-CHANNEL REMINDERS & CALLS HUB
+            ======================================================== */}
+        {activeNav === 'reminders' && (
+          <div className="space-y-6 mb-8">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#052429] text-[#00e575] flex items-center justify-center font-bold">
+                    <PhoneCall className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">
+                    Automated Multi-Channel Outreach & Reminder Operations Hub
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Manage AI-driven conversational phone calls, multilingual SMS alerts, dynamic patient email confirmations, and retry fallback trees.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/doctor/notifications"
+                  className="px-4 py-2 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                >
+                  <BellRing className="w-3.5 h-3.5" />
+                  Open Notification Automation Engine
+                </Link>
+              </div>
+            </div>
+
+            {/* Outreach Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Active Voice Call Queue</span>
+                <div className="text-xl font-bold text-slate-900 mt-1">4 Scheduled</div>
+                <span className="text-[11px] text-teal-700">T-24h Pre-appointment</span>
+              </div>
+              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Dynamic Emails Sent</span>
+                <div className="text-xl font-bold text-slate-900 mt-1">12 Delivered</div>
+                <span className="text-[11px] text-emerald-700">Individual Recipient Routing</span>
+              </div>
+              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">SMS Fallbacks Triggered</span>
+                <div className="text-xl font-bold text-slate-900 mt-1">2 Dispatched</div>
+                <span className="text-[11px] text-amber-700">After Unanswered Calls</span>
+              </div>
+              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Nurse Escalations</span>
+                <div className="text-xl font-bold text-slate-900 mt-1">1 Overdue Alert</div>
+                <span className="text-[11px] text-red-700">Requires Staff Outreach</span>
+              </div>
+            </div>
+
+            {/* Multi-channel Operations Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              {/* Voice AI Retry Protocol */}
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-3 border-b border-slate-100 flex items-center gap-1.5">
+                    <PhoneCall className="w-4 h-4 text-teal-800" /> Conversational Voice Outreach Protocol
+                  </h3>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-3">
+                    <div className="flex items-center justify-between font-bold text-slate-900">
+                      <span>Ravi Kumar (MRN-RAVI-001)</span>
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        In Retry Tree
+                      </span>
+                    </div>
+                    <p className="text-slate-600">
+                      <strong>Scheduled Call:</strong> 14 Oct 2026 • 10:00 AM IST (Cardiology Clinic Visit)
+                    </p>
+
+                    <div className="space-y-2 pt-2 border-t border-slate-200">
+                      <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 text-[11px]">
+                        <span className="font-bold text-amber-700">Attempt 1 (10:00 AM):</span>
+                        <span className="text-slate-600">Automated Call — Unanswered (No answer)</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 text-[11px]">
+                        <span className="font-bold text-teal-700">Attempt 2 (10:30 AM):</span>
+                        <span className="text-slate-600">Second Voice Attempt — Queued</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 text-[11px]">
+                        <span className="font-bold text-indigo-700">Fallback (10:45 AM):</span>
+                        <span className="text-slate-600">Dispatches SMS + Portal Confirmation Link</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Compliant with Hospital Communication Guidelines & Quiet Hours</span>
+                </div>
+              </div>
+
+              {/* Dynamic Email & SMS Dispatch Engine */}
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 pb-3 border-b border-slate-100 flex items-center gap-1.5">
+                    <Send className="w-4 h-4 text-teal-800" /> Patient Dynamic Email & SMS Delivery
+                  </h3>
+
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">Arun Patel</span>
+                        <span className="text-[10px] font-mono text-teal-800 font-bold">arun.patel@example.com</span>
+                      </div>
+                      <p className="text-slate-600 text-[11px] mt-1">Cardiology follow-up booking confirmation & fasting instructions sent.</p>
+                      <span className="text-[10px] text-emerald-700 font-semibold block mt-1">✓ Sent directly to individual patient email</span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">Priya Sharma</span>
+                        <span className="text-[10px] font-mono text-teal-800 font-bold">priya.sharma@example.com</span>
+                      </div>
+                      <p className="text-slate-600 text-[11px] mt-1">Lab requisition notice for Serum Creatinine & Potassium panel sent.</p>
+                      <span className="text-[10px] text-emerald-700 font-semibold block mt-1">✓ Sent directly to individual patient email</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Emails dispatched using patient individual profiles</span>
+                  <button
+                    onClick={() => {
+                      setToastMessage('Live email & reminder pipeline synchronized with MySQL database');
+                      setTimeout(() => setToastMessage(null), 3000);
+                    }}
+                    className="px-3 py-1 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 cursor-pointer"
+                  >
+                    Refresh Pipeline
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       
         {activeNav === 'upload' && (
@@ -1021,17 +1315,40 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                 >
                   Close
                 </button>
-                <Link
-                  to="/patient"
-                  className="px-4 py-2 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-xl shadow-xs"
+                <button
+                  onClick={() => {
+                    const pid = inspectedPatient.id;
+                    setInspectedPatient(null);
+                    handleOpenPatientProfile(pid);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-xl shadow-xs cursor-pointer"
                 >
-                  View Patient Portal
-                </Link>
+                  Open 360° Profile
+                </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* Patient Registration Modal */}
+      <PatientRegistrationModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onPatientRegistered={handlePatientRegistered}
+      />
+
+      {/* Centralized Patient Profile 360 Modal */}
+      <CentralizedPatientProfileModal
+        isOpen={isProfileModalOpen}
+        patientId={selectedProfilePatientId}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedProfilePatientId(null);
+        }}
+        onRefreshParent={loadDashboardData}
+        onShowToast={showToast}
+      />
     
       </div>
     </div>

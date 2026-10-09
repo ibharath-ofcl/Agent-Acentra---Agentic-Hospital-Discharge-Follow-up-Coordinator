@@ -250,13 +250,21 @@ def send_appointment_confirmation_email(
     db: Session,
     appointment: models.Appointment,
     patient: models.Patient,
-    force_resend: bool = False
+    force_resend: bool = False,
+    override_recipient_email: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Validates patient consent, formats multilingual content, triggers email delivery,
     records the NotificationLog and TimelineEvent, and returns the delivery metadata.
     Idempotent: prevents duplicate confirmation emails for the same appointment.
     """
+    # If an override recipient email is provided and valid, update patient model
+    if override_recipient_email and is_valid_email(override_recipient_email):
+        patient.email = override_recipient_email.strip()
+        if patient.user:
+            patient.user.email = override_recipient_email.strip()
+        db.commit()
+
     # 1. Idempotency Check (prevent duplicate emails for the same confirmation event)
     if not force_resend:
         existing_log = db.query(models.NotificationLog).filter(
@@ -291,7 +299,7 @@ def send_appointment_confirmation_email(
             provider_message_id=None,
             error_message="Patient email consent is False.",
             ai_generation_mode="consent_policy",
-            recipient_email=patient.email,
+            recipient_email=override_recipient_email or patient.email,
             recipient_phone=patient.contact_phone,
             sent_at=None,
             is_demo=True
@@ -301,7 +309,7 @@ def send_appointment_confirmation_email(
         return {
             "status": "skipped",
             "notificationId": notif_id,
-            "recipientEmail": patient.email,
+            "recipientEmail": override_recipient_email or patient.email,
             "providerMessageId": None,
             "subject": None,
             "message": "Email skipped: patient email consent is disabled.",
@@ -310,7 +318,7 @@ def send_appointment_confirmation_email(
         }
 
     # 3. Recipient Email Validation
-    recipient_email = (patient.email or "").strip()
+    recipient_email = (override_recipient_email or patient.email or "").strip()
     if not is_valid_email(recipient_email):
         # Fallback to user email if available
         if patient.user and is_valid_email(patient.user.email):

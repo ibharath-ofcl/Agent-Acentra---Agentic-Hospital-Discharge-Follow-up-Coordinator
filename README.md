@@ -242,7 +242,26 @@ Located in the **Doctor Command Center** (`/doctor` -> *Discharge Intelligence*)
 
 ---
 
-## 7. Demo Credentials
+## 8. Appointment Booking & Multilingual Email Confirmation
+
+CareFlow AI features an integrated appointment booking and multilingual email confirmation workflow directly within the existing application:
+
+### Workflow
+1. **Doctor / Care Coordinator Booking** (`/doctor/follow-ups`): Select any registered patient, pick date/time/specialty/doctor, and click **"Save in MySQL & Confirm"**.
+2. **Patient Self-Booking** (`/patient/follow-ups`): Patient selects appointment date, time, specialty, doctor, and preferred language (English, Tamil, Hindi).
+3. **MySQL Persistence**: The appointment is saved to the `appointments` table and linked to `patients`, `followup_tasks`, and `timeline_events`.
+4. **Patient Email Retrieval & Validation**: The backend fetches the patient's registered email (`patient.email`), checks `patient.email_consent`, and validates format.
+5. **Multilingual Confirmation Dispatch**: Sends a structured HTML & plain-text confirmation email tailored to the patient's preferred language (`en`, `ta`, `hi`):
+   - English: `"Your appointment is confirmed"`
+   - Tamil: `"உங்கள் சந்திப்பு உறுதி செய்யப்பட்டது"`
+   - Hindi: `"आपका अपॉइंटमेंट पक्का हो गया है"`
+6. **Notification Audit Logging**: The result is recorded in the `notification_logs` table (`status`: `sent` / `simulated` / `failed` / `skipped`) with timestamps and provider IDs.
+7. **Duplicate Prevention (Idempotency)**: Prevents re-sending confirmation emails for previously confirmed appointments on page reloads or repeated calls.
+8. **Failure Resilience**: If the SMTP provider fails, the appointment remains saved in MySQL and the error is logged without crashing the app.
+
+---
+
+## 9. Demo Credentials
 * **Doctor / Coordinator Role**:
   * Username / Email: `doctor` (or `doctor@acentra.com`)
   * Password: `doctor123` (or `password`)
@@ -252,6 +271,6 @@ Located in the **Doctor Command Center** (`/doctor` -> *Discharge Intelligence*)
 
 ---
 
-## 8. Disclaimer
+## 10. Disclaimer
 **Synthetic Healthcare Data — Demonstration Only.**  
 All clinical scenarios, patient names, medical records (MRNs), medications, and timelines used in CareFlow AI are 100% synthetic demonstrations designed for software evaluation. CareFlow AI coordinates documented instructions and does not replace professional medical judgment.

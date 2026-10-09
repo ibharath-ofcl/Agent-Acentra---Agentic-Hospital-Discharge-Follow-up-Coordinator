@@ -30,6 +30,18 @@ class Patient(Base):
     priority_level = Column(String(50), default="routine") # immediate-review, high-priority, routine
     email_consent = Column(Boolean, default=True)
     sms_consent = Column(Boolean, default=True)
+    age = Column(Integer, nullable=True)
+    blood_group = Column(String(20), nullable=True)
+    address = Column(Text, nullable=True)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    pincode = Column(String(20), nullable=True)
+    department = Column(String(100), nullable=True)
+    emergency_contact_name = Column(String(255), nullable=True)
+    emergency_contact_phone = Column(String(50), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 
     user = relationship("User", back_populates="patient")
     tasks = relationship("FollowUpTask", back_populates="patient")

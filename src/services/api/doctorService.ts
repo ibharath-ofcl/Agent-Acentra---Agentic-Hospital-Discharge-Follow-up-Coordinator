@@ -244,6 +244,8 @@ export const doctorService = {
     location?: string;
     notes?: string;
     send_confirmation_email?: boolean;
+    patient_email?: string;
+    recipient_email?: string;
     status?: string;
   }): Promise<any> => {
     return await fetchJson<any>('/api/doctor/appointments', {
@@ -265,6 +267,88 @@ export const doctorService = {
     if (params?.channel) searchParams.append('channel', params.channel);
     const queryStr = searchParams.toString() ? `?${searchParams.toString()}` : '';
     return await fetchJson<any[]>(`/api/doctor/notifications${queryStr}`);
+  },
+
+  registerPatient: async (payload: {
+    name: string;
+    dob?: string;
+    age?: number;
+    gender?: string;
+    blood_group?: string;
+    contact_phone: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    department?: string;
+    attending_physician?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    preferred_language?: string;
+    email_consent?: boolean;
+    sms_consent?: boolean;
+    notes?: string;
+    allow_duplicate?: boolean;
+  }): Promise<any> => {
+    return await fetchJson<any>('/api/v1/patients', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  searchPatients: async (query: string): Promise<any[]> => {
+    return await fetchJson<any[]>(`/api/doctor/patients/search?q=${encodeURIComponent(query)}`);
+  },
+
+  getPatientProfile: async (patientId: string): Promise<any> => {
+    return await fetchJson<any>(`/api/doctor/patients/${encodeURIComponent(patientId)}`);
+  },
+
+  updatePatient: async (patientId: string, payload: {
+    name?: string;
+    dob?: string;
+    age?: number;
+    gender?: string;
+    blood_group?: string;
+    contact_phone?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    department?: string;
+    attending_physician?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    preferred_language?: string;
+    email_consent?: boolean;
+    sms_consent?: boolean;
+    notes?: string;
+  }): Promise<any> => {
+    return await fetchJson<any>(`/api/doctor/patients/${encodeURIComponent(patientId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  addPatientTest: async (patientId: string, payload: {
+    test_name: string;
+    due_date?: string;
+    appointment_id?: string;
+    notes?: string;
+  }): Promise<any> => {
+    return await fetchJson<any>(`/api/doctor/patients/${encodeURIComponent(patientId)}/tests`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  completePatientTest: async (testId: string): Promise<any> => {
+    return await fetchJson<any>(`/api/doctor/tests/${encodeURIComponent(testId)}/complete`, {
+      method: 'POST'
+    });
   }
 };
+
 

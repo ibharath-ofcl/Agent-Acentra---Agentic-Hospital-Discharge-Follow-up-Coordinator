@@ -1,6 +1,7 @@
 import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { SceneCanvas } from './three/SceneCanvas';
 import { CustomCursor } from './three/CustomCursor';
@@ -56,7 +57,8 @@ function PageLoadingFallback() {
 export function App() {
   return (
     <AuthProvider>
-      <Router>
+      <LanguageProvider>
+        <Router>
         {/* Global 3D Scene Canvas Persistent Layer */}
         <SceneCanvas />
         <CustomCursor />
@@ -241,6 +243,7 @@ export function App() {
           </Suspense>
         </div>
       </Router>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

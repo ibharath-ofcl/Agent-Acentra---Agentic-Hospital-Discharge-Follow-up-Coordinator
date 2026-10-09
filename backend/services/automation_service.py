@@ -148,7 +148,7 @@ def run_automation_pipeline(
                     message=f"Duplicate notification prevented. Already sent at {existing_notif.sent_at.strftime('%d %b %H:%M')}.",
                     error_message="Skipped — Already Sent",
                     ai_generation_mode="duplicate_suppressed",
-                    recipient_email=pat.email or "ravi@example.com",
+                    recipient_email=pat.email or (pat.user.email if pat.user else "") or f"patient_{pat.id.lower()}@hospital.org",
                     recipient_phone=pat.contact_phone or "+919876543210",
                     is_demo=is_demo,
                     simulation_date=curr_date_str
@@ -179,7 +179,7 @@ def run_automation_pipeline(
                     message="Notification suppressed due to missing patient email communication consent.",
                     error_message="Patient communication consent not available.",
                     ai_generation_mode="consent_suppressed",
-                    recipient_email=pat.email or "ravi@example.com",
+                    recipient_email=pat.email or (pat.user.email if pat.user else "") or f"patient_{pat.id.lower()}@hospital.org",
                     is_demo=is_demo,
                     simulation_date=curr_date_str
                 )
@@ -243,7 +243,10 @@ def run_automation_pipeline(
                         language=pat.preferred_language or "English"
                     )
 
-                    recipient_email = pat.email or "ravi@example.com"
+                    recipient_email = (pat.email or (pat.user.email if pat.user else "") or "").strip()
+                    if not recipient_email:
+                        recipient_email = f"patient_{pat.id.lower()}@hospital.org"
+
                     status, prov_id, err_msg, del_mode = send_email(
                         recipient=recipient_email,
                         subject=email_payload.get("subject", "CareFlow Appointment Notification"),

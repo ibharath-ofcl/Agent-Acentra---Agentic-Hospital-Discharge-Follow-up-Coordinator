@@ -2,12 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import os
 import shutil
 import datetime
 import uuid
+import re
 from pydantic import BaseModel
+
 
 import models
 import document_parser
@@ -417,6 +419,542 @@ def doctor_stats(db: Session = Depends(get_db), current_user: models.User = Depe
         "overdue": overdue
     }
 
+# ======================= PATIENT REGISTRATION & CENTRALIZED PROFILES =======================
+
+class RegisterPatientRequest(BaseModel):
+    name: str
+    dob: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = "Other"
+    blood_group: Optional[str] = None
+    contact_phone: str
+    email: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    department: Optional[str] = "Cardiology"
+    attending_physician: Optional[str] = "Dr. Rajesh Mehta"
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    preferred_language: Optional[str] = "English"
+    email_consent: Optional[bool] = True
+    sms_consent: Optional[bool] = True
+    notes: Optional[str] = None
+    confirm_duplicate: Optional[bool] = False
+    allow_duplicate: Optional[bool] = False
+
+class UpdatePatientRequest(BaseModel):
+    name: Optional[str] = None
+    dob: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    blood_group: Optional[str] = None
+    contact_phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    department: Optional[str] = None
+    attending_physician: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    preferred_language: Optional[str] = None
+    email_consent: Optional[bool] = None
+    sms_consent: Optional[bool] = None
+    notes: Optional[str] = None
+
+class CreateRequiredTestRequest(BaseModel):
+    test_name: str
+    due_date: Optional[str] = None
+    appointment_id: Optional[str] = None
+    notes: Optional[str] = None
+
+def calculate_age_from_dob(dob_str: Optional[str]) -> Optional[int]:
+    if not dob_str:
+        return None
+    dob_clean = dob_str.strip()
+    for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d %b %Y", "%d %B %Y"]:
+        try:
+            d = datetime.datetime.strptime(dob_clean, fmt).date()
+            today = datetime.date.today()
+            age = today.year - d.year - ((today.month, today.day) < (d.month, d.day))
+            return max(0, age)
+        except ValueError:
+            pass
+    return None
+
+def validate_patient_registration(req: RegisterPatientRequest) -> Tuple[bool, Optional[str]]:
+    if not req.name or not req.name.strip():
+        return False, "Patient Full Name is required."
+    if not req.contact_phone or not req.contact_phone.strip():
+        return False, "Mobile Number is required."
+    phone_digits = re.sub(r"\D", "", req.contact_phone)
+    if len(phone_digits) < 7:
+        return False, "Mobile number must contain at least 7 valid digits."
+    if req.email and req.email.strip() and not is_valid_email(req.email.strip()):
+        return False, f"Invalid email format: '{req.email}'."
+    if req.dob and req.dob.strip():
+        parsed = None
+        for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d %b %Y", "%d %B %Y"]:
+            try:
+                parsed = datetime.datetime.strptime(req.dob.strip(), fmt).date()
+                break
+            except ValueError:
+                pass
+        if parsed and parsed > datetime.date.today():
+            return False, "Date of Birth cannot be in the future."
+    return True, None
+
+def find_potential_duplicate_patient(db: Session, name: str, phone: str, email: Optional[str], dob: Optional[str]) -> Optional[models.Patient]:
+    clean_phone = re.sub(r"\D", "", phone)
+    all_patients = db.query(models.Patient).all()
+    for p in all_patients:
+        if p.contact_phone:
+            p_phone = re.sub(r"\D", "", p.contact_phone)
+            if clean_phone and p_phone and (clean_phone == p_phone or (len(clean_phone) >= 10 and clean_phone[-10:] == p_phone[-10:])):
+                return p
+        if email and p.email and email.strip().lower() == p.email.strip().lower():
+            return p
+        if dob and p.dob and name.strip().lower() == p.name.strip().lower() and dob.strip() == p.dob.strip():
+            return p
+    return None
+
+def generate_patient_id(name: str, db: Session) -> str:
+    name_parts = [part for part in re.split(r"\s+", name.strip().upper()) if part]
+    prefix = "".join([part[0] for part in name_parts[:2]]) if name_parts else "PT"
+    random_hex = uuid.uuid4().hex[:4].upper()
+    return f"MRN-{prefix}-{random_hex}"
+
+def serialize_patient_profile(p: models.Patient) -> dict:
+    tasks = p.tasks or []
+    appts = p.appointments or []
+    tests = p.required_tests or []
+    timeline = p.timeline or []
+    notifs = p.notifications or []
+    issues = p.issues or []
+    docs = p.documents or []
+
+    computed_age = p.age if getattr(p, 'age', None) is not None else calculate_age_from_dob(p.dob)
+
+    return {
+        "id": p.id,
+        "patientId": p.id,
+        "name": p.name,
+        "patientName": p.name,
+        "dob": p.dob or "",
+        "age": computed_age,
+        "gender": p.gender or "Other",
+        "bloodGroup": getattr(p, 'blood_group', None) or "—",
+        "contactPhone": p.contact_phone or "",
+        "email": p.email or "",
+        "address": getattr(p, 'address', None) or "",
+        "city": getattr(p, 'city', None) or "",
+        "state": getattr(p, 'state', None) or "",
+        "pincode": getattr(p, 'pincode', None) or "",
+        "department": getattr(p, 'department', None) or (appts[0].department if appts else "Cardiology"),
+        "attendingPhysician": p.attending_physician or "Dr. Rajesh Mehta",
+        "emergencyContactName": getattr(p, 'emergency_contact_name', None) or "",
+        "emergencyContactPhone": getattr(p, 'emergency_contact_phone', None) or "",
+        "preferredLanguage": p.preferred_language or "English",
+        "priorityLevel": p.priority_level or "routine",
+        "emailConsent": p.email_consent if p.email_consent is not None else True,
+        "smsConsent": p.sms_consent if p.sms_consent is not None else True,
+        "primaryDiagnosis": p.primary_diagnosis or "General Outpatient Care",
+        "admissionDate": p.admission_date or "",
+        "dischargeDate": p.discharge_date or "",
+        "notes": getattr(p, 'notes', None) or "",
+        "createdAt": p.created_at.isoformat() if getattr(p, 'created_at', None) else None,
+        "appointments": [{
+            "id": a.id,
+            "date": a.appointment_date.strftime("%Y-%m-%d") if a.appointment_date else "",
+            "formattedDate": a.appointment_date.strftime("%d %B %Y") if a.appointment_date else "-",
+            "time": a.time_str or "10:30 AM",
+            "doctor": a.doctor_name or "Dr. Rajesh Mehta",
+            "department": a.department or "Cardiology",
+            "location": a.location or "CareFlow Pavilion",
+            "status": a.status or "scheduled",
+            "notes": a.notes or ""
+        } for a in sorted(appts, key=lambda x: x.appointment_date or datetime.date.min, reverse=True)],
+        "requiredTests": [{
+            "id": t.id,
+            "testName": t.test_name,
+            "dueDate": t.due_date.strftime("%Y-%m-%d") if t.due_date else "",
+            "formattedDueDate": t.due_date.strftime("%d %B %Y") if t.due_date else "-",
+            "status": t.status,
+            "completedAt": t.completed_at.isoformat() if t.completed_at else None,
+            "sourceDoc": t.source_doc,
+            "notes": t.notes
+        } for t in tests],
+        "tasks": [{
+            "id": t.id,
+            "title": t.title,
+            "dueDate": t.due_date,
+            "status": t.status,
+            "taskType": t.task_type,
+            "specialty": t.specialty,
+            "attending": t.attending,
+            "source": t.source,
+            "daysOverdue": t.days_overdue
+        } for t in tasks],
+        "timeline": [{
+            "id": tl.id,
+            "dateStr": tl.date_str,
+            "title": tl.title,
+            "description": tl.description,
+            "status": tl.status,
+            "eventType": tl.event_type
+        } for tl in timeline],
+        "notifications": [{
+            "id": n.id,
+            "scenario": n.scenario,
+            "channel": n.channel,
+            "status": n.status,
+            "subject": n.subject,
+            "message": n.message,
+            "sentAt": n.sent_at.isoformat() if n.sent_at else None,
+            "recipientEmail": n.recipient_email,
+            "recipientPhone": n.recipient_phone
+        } for n in notifs],
+        "issues": [{
+            "id": i.id,
+            "category": i.category,
+            "issue": i.issue,
+            "flagReason": i.flag_reason,
+            "status": i.status
+        } for i in issues],
+        "documents": [{
+            "id": d.id,
+            "filename": d.original_filename,
+            "uploadDate": d.upload_date.isoformat() if d.upload_date else None,
+            "status": d.status
+        } for d in docs]
+    }
+
+def handle_patient_registration_core(req: RegisterPatientRequest, db: Session, current_user: Optional[models.User] = None):
+    # 1. Validation
+    is_valid, err_msg = validate_patient_registration(req)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=err_msg)
+
+    # 2. Duplicate Check
+    if not (req.confirm_duplicate or req.allow_duplicate):
+        dup = find_potential_duplicate_patient(db, req.name, req.contact_phone, req.email, req.dob)
+        if dup:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "status": "duplicate_warning",
+                    "message": f"Potential duplicate patient detected: '{dup.name}' ({dup.id}) with matching contact or date of birth. Please verify before registering.",
+                    "existingPatient": {
+                        "id": dup.id,
+                        "name": dup.name,
+                        "contactPhone": dup.contact_phone,
+                        "email": dup.email,
+                        "dob": dup.dob
+                    }
+                }
+            )
+
+    # 3. Generate Patient ID
+    patient_id = generate_patient_id(req.name, db)
+    calc_age = req.age if req.age is not None else calculate_age_from_dob(req.dob)
+
+    # 4. Save to MySQL
+    new_patient = models.Patient(
+        id=patient_id,
+        name=req.name.strip(),
+        email=req.email.strip() if req.email else None,
+        dob=req.dob.strip() if req.dob else None,
+        gender=req.gender or "Other",
+        primary_diagnosis="General Outpatient Registration",
+        admission_date=None,
+        discharge_date=None,
+        attending_physician=req.attending_physician or "Dr. Rajesh Mehta",
+        contact_phone=req.contact_phone.strip(),
+        preferred_language=req.preferred_language or "English",
+        priority_level="routine",
+        email_consent=req.email_consent if req.email_consent is not None else True,
+        sms_consent=req.sms_consent if req.sms_consent is not None else True,
+        age=calc_age,
+        blood_group=req.blood_group,
+        address=req.address,
+        city=req.city,
+        state=req.state,
+        pincode=req.pincode,
+        department=req.department or "Cardiology",
+        emergency_contact_name=req.emergency_contact_name,
+        emergency_contact_phone=req.emergency_contact_phone,
+        notes=req.notes
+    )
+    db.add(new_patient)
+
+    # 5. Add Registration Timeline Event
+    reg_tl = models.TimelineEvent(
+        id=f"TL-REG-{uuid.uuid4().hex[:8].upper()}",
+        patient_id=new_patient.id,
+        date_str=datetime.datetime.utcnow().strftime("%d %b"),
+        title="Patient Registered",
+        description=f"Patient registered in {new_patient.department} under {new_patient.attending_physician}.",
+        status="completed",
+        event_type="registration"
+    )
+    db.add(reg_tl)
+    db.commit()
+    db.refresh(new_patient)
+
+    return {
+        "status": "success",
+        "message": f"Patient '{new_patient.name}' successfully registered with ID {new_patient.id}.",
+        "patientId": new_patient.id,
+        "patient": serialize_patient_profile(new_patient)
+    }
+
+@app.post("/api/v1/patients")
+def api_register_patient_v1(req: RegisterPatientRequest, db: Session = Depends(get_db)):
+    return handle_patient_registration_core(req, db)
+
+@app.post("/api/doctor/patients")
+def api_doctor_register_patient(req: RegisterPatientRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403, detail="Doctor or Coordinator authorization required.")
+    return handle_patient_registration_core(req, db, current_user)
+
+@app.get("/api/doctor/patients/search")
+def search_doctor_patients(
+    q: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    clean_q = q.strip().lower()
+    clean_digits = re.sub(r"\D", "", q)
+    all_patients = db.query(models.Patient).all()
+    results = []
+
+    for p in all_patients:
+        matches = False
+        if clean_q in (p.name or "").lower():
+            matches = True
+        elif clean_q in (p.id or "").lower():
+            matches = True
+        elif clean_q in (p.email or "").lower():
+            matches = True
+        elif clean_digits and p.contact_phone and clean_digits in re.sub(r"\D", "", p.contact_phone):
+            matches = True
+        
+        if matches:
+            results.append(serialize_patient_profile(p))
+
+    return results
+
+@app.get("/api/doctor/patients/{patient_id}")
+def get_doctor_patient_profile(
+    patient_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail=f"Patient '{patient_id}' not found in MySQL records.")
+    
+    return serialize_patient_profile(patient)
+
+@app.put("/api/doctor/patients/{patient_id}")
+@app.patch("/api/doctor/patients/{patient_id}")
+def update_doctor_patient_profile(
+    patient_id: str,
+    req: UpdatePatientRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail=f"Patient '{patient_id}' not found in MySQL records.")
+    
+    if req.name is not None:
+        patient.name = req.name.strip()
+    if req.dob is not None:
+        patient.dob = req.dob.strip()
+    if req.age is not None:
+        patient.age = req.age
+    if req.gender is not None:
+        patient.gender = req.gender
+    if req.blood_group is not None:
+        patient.blood_group = req.blood_group
+    if req.contact_phone is not None:
+        patient.contact_phone = req.contact_phone.strip()
+    if req.email is not None:
+        clean_email = req.email.strip() if req.email else None
+        patient.email = clean_email
+        if patient.user and clean_email:
+            patient.user.email = clean_email
+    if req.address is not None:
+        patient.address = req.address
+    if req.city is not None:
+        patient.city = req.city
+    if req.state is not None:
+        patient.state = req.state
+    if req.pincode is not None:
+        patient.pincode = req.pincode
+    if req.department is not None:
+        patient.department = req.department
+    if req.attending_physician is not None:
+        patient.attending_physician = req.attending_physician
+    if req.emergency_contact_name is not None:
+        patient.emergency_contact_name = req.emergency_contact_name
+    if req.emergency_contact_phone is not None:
+        patient.emergency_contact_phone = req.emergency_contact_phone
+    if req.preferred_language is not None:
+        patient.preferred_language = req.preferred_language
+    if req.email_consent is not None:
+        patient.email_consent = req.email_consent
+    if req.sms_consent is not None:
+        patient.sms_consent = req.sms_consent
+    if req.notes is not None:
+        patient.notes = req.notes
+    
+    db.commit()
+    db.refresh(patient)
+    return {
+        "status": "success",
+        "message": f"Patient '{patient.name}' updated successfully in MySQL.",
+        "patient": serialize_patient_profile(patient)
+    }
+
+@app.put("/api/patients/{patient_id}")
+def update_patient_profile_direct(
+    patient_id: str,
+    req: UpdatePatientRequest,
+    db: Session = Depends(get_db)
+):
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail=f"Patient '{patient_id}' not found.")
+    if req.name is not None:
+        patient.name = req.name.strip()
+    if req.email is not None:
+        clean_email = req.email.strip() if req.email else None
+        patient.email = clean_email
+        if patient.user and clean_email:
+            patient.user.email = clean_email
+    if req.contact_phone is not None:
+        patient.contact_phone = req.contact_phone.strip()
+    if req.preferred_language is not None:
+        patient.preferred_language = req.preferred_language
+    if req.email_consent is not None:
+        patient.email_consent = req.email_consent
+    db.commit()
+    db.refresh(patient)
+    return serialize_patient_profile(patient)
+
+@app.post("/api/doctor/patients/{patient_id}/tests")
+def add_doctor_patient_test(
+    patient_id: str,
+    req: CreateRequiredTestRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found.")
+    
+    parsed_date = None
+    if req.due_date:
+        for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d %b %Y", "%d %B %Y"]:
+            try:
+                parsed_date = datetime.datetime.strptime(req.due_date.strip(), fmt).date()
+                break
+            except ValueError:
+                pass
+
+    test_id = f"TEST-{uuid.uuid4().hex[:8].upper()}"
+    new_test = models.RequiredTest(
+        id=test_id,
+        patient_id=patient.id,
+        appointment_id=req.appointment_id,
+        test_name=req.test_name,
+        due_date=parsed_date or datetime.date.today(),
+        status="pending",
+        source_doc="Clinical Coordinator Order",
+        notes=req.notes
+    )
+    db.add(new_test)
+
+    # Timeline event
+    tl = models.TimelineEvent(
+        id=f"TL-TEST-{uuid.uuid4().hex[:8].upper()}",
+        patient_id=patient.id,
+        date_str=datetime.datetime.utcnow().strftime("%d %b"),
+        title=f"Required Test Ordered: {req.test_name}",
+        description=f"Ordered for {patient.name} due by {parsed_date or 'scheduled date'}.",
+        status="pending",
+        event_type="test"
+    )
+    db.add(tl)
+    db.commit()
+    db.refresh(new_test)
+
+    return {
+        "status": "success",
+        "message": f"Test '{req.test_name}' successfully ordered for {patient.name}.",
+        "test": {
+            "id": new_test.id,
+            "patientId": new_test.patient_id,
+            "testName": new_test.test_name,
+            "dueDate": new_test.due_date.strftime("%Y-%m-%d") if new_test.due_date else "",
+            "status": new_test.status
+        }
+    }
+
+@app.post("/api/doctor/tests/{test_id}/complete")
+def complete_doctor_patient_test(
+    test_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != 'doctor':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    test = db.query(models.RequiredTest).filter(models.RequiredTest.id == test_id).first()
+    if not test:
+        raise HTTPException(status_code=404, detail="Required test not found.")
+    
+    test.status = "completed"
+    test.completed_at = datetime.datetime.utcnow()
+
+    # Log timeline event
+    tl = models.TimelineEvent(
+        id=f"TL-CMP-{uuid.uuid4().hex[:8].upper()}",
+        patient_id=test.patient_id,
+        date_str=datetime.datetime.utcnow().strftime("%d %b"),
+        title=f"Test Verified Completed: {test.test_name}",
+        description=f"Clinical laboratory confirmed specimen processing and results uploaded to patient chart.",
+        status="completed",
+        event_type="test"
+    )
+    db.add(tl)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Test '{test.test_name}' marked completed.",
+        "testId": test.id,
+        "newStatus": test.status
+    }
+
 @app.get("/api/doctor/patients")
 def doctor_patients(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if current_user.role != 'doctor':
@@ -432,34 +970,43 @@ def doctor_patients(db: Session = Depends(get_db), current_user: models.User = D
         
         # Check appointments if tasks don't have department/due
         appts = [a for a in p.appointments if a.status != 'completed']
-        dept = appts[0].department if appts else (tasks[0].specialty if tasks and tasks[0].specialty else "Cardiology")
+        dept = p.department if getattr(p, 'department', None) else (appts[0].department if appts else (tasks[0].specialty if tasks and tasks[0].specialty else "Cardiology"))
         if (due == "-" or not due) and appts:
             due = str(appts[0].appointment_date)
+
+        computed_age = p.age if getattr(p, 'age', None) is not None else calculate_age_from_dob(p.dob)
 
         out.append({
             "id": p.id,
             "patientId": p.id,
             "patientName": p.name,
             "name": p.name,
+            "age": computed_age,
+            "gender": p.gender or "Unknown",
+            "bloodGroup": getattr(p, 'blood_group', None) or "—",
             "department": dept,
             "followUp": next_task,
             "dueDate": due,
             "followUpDate": due,
             "status": status,
             "level": p.priority_level or "routine",
-            "actionLabel": "Review Now" if p.priority_level == 'immediate-review' else "View",
-            "gender": p.gender or "Unknown",
+            "actionLabel": "Review Now" if p.priority_level == 'immediate-review' else "View Profile",
             "primaryDiagnosis": p.primary_diagnosis or "General Care",
             "admissionDate": p.admission_date or "-",
             "dischargeDate": p.discharge_date or "Recently Discharged",
-            "attendingPhysician": p.attending_physician or "Dr. Meera Patel",
+            "attendingPhysician": p.attending_physician or "Dr. Rajesh Mehta",
             "contactPhone": p.contact_phone or "-",
-            "preferredLanguage": p.preferred_language or "English"
+            "email": p.email or "",
+            "city": getattr(p, 'city', None) or "",
+            "preferredLanguage": p.preferred_language or "English",
+            "emailConsent": p.email_consent if p.email_consent is not None else True,
+            "smsConsent": p.sms_consent if p.sms_consent is not None else True
         })
         
     priority_map = {"immediate-review": 0, "high-priority": 1, "routine": 2}
     out.sort(key=lambda x: priority_map.get(x["level"], 3))
     return out
+
 
 @app.get("/api/doctor/reviews")
 def doctor_reviews(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -1755,6 +2302,8 @@ class CreateAppointmentRequest(BaseModel):
     notes: Optional[str] = None
     send_confirmation_email: Optional[bool] = True
     status: Optional[str] = "scheduled"
+    patient_email: Optional[str] = None
+    recipient_email: Optional[str] = None
 
 class PatientBookAppointmentRequest(BaseModel):
     appointment_date: str
@@ -1763,6 +2312,8 @@ class PatientBookAppointmentRequest(BaseModel):
     doctor_name: Optional[str] = "Dr. Rajesh Mehta"
     preferred_language: Optional[str] = None
     notes: Optional[str] = None
+    patient_email: Optional[str] = None
+    recipient_email: Optional[str] = None
 
 @app.post("/api/doctor/appointments")
 def create_doctor_appointment(
@@ -1776,6 +2327,14 @@ def create_doctor_appointment(
     patient = db.query(models.Patient).filter(models.Patient.id == req.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail=f"Patient '{req.patient_id}' not found in MySQL records.")
+
+    # Override or update patient email if provided
+    active_email = (req.recipient_email or req.patient_email or "").strip()
+    if active_email and is_valid_email(active_email):
+        patient.email = active_email
+        if patient.user:
+            patient.user.email = active_email
+        db.commit()
 
     # Parse appointment date
     parsed_date = None
@@ -1842,7 +2401,8 @@ def create_doctor_appointment(
             db=db,
             appointment=new_appt,
             patient=patient,
-            force_resend=False
+            force_resend=False,
+            override_recipient_email=active_email or None
         )
 
     return {
@@ -2010,6 +2570,14 @@ def patient_book_appointment(
 
     patient = current_user.patient
 
+    # Update patient email if provided
+    active_email = (req.recipient_email or req.patient_email or "").strip()
+    if active_email and is_valid_email(active_email):
+        patient.email = active_email
+        if patient.user:
+            patient.user.email = active_email
+        db.commit()
+
     # Update preferred language if selected by patient
     if req.preferred_language:
         patient.preferred_language = req.preferred_language
@@ -2075,7 +2643,8 @@ def patient_book_appointment(
         db=db,
         appointment=new_appt,
         patient=patient,
-        force_resend=False
+        force_resend=False,
+        override_recipient_email=active_email or None
     )
 
     return {
