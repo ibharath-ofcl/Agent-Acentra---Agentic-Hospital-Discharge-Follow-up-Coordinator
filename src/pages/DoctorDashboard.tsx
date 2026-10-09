@@ -129,10 +129,12 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
     return priorityList.filter((item) => {
       if (!item) return false;
       const pName = (item.patientName || item.name || '').toLowerCase();
+      const pId = (item.patientId || item.id || '').toLowerCase();
       const fUp = (item.followUp || '').toLowerCase();
-      const rsn = (item.reason || item.primaryDiagnosis || '').toLowerCase();
+      const rsn = (item.primaryDiagnosis || item.reason || '').toLowerCase();
+      const dept = (item.department || '').toLowerCase();
 
-      const matchesSearch = !query || pName.includes(query) || fUp.includes(query) || rsn.includes(query);
+      const matchesSearch = !query || pName.includes(query) || pId.includes(query) || fUp.includes(query) || rsn.includes(query) || dept.includes(query);
       const matchesPriority = priorityFilter === 'all' || item.level === priorityFilter;
       const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
       return matchesSearch && matchesPriority && matchesStatus;
@@ -372,7 +374,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <ClockAlert className="w-3.5 h-3.5 text-amber-600" /> High Priority
             </div>
-            <div className="my-2 text-2xl font-black text-slate-900">2</div>
+            <div className="my-2 text-2xl font-black text-slate-900">{stats.highPriority}</div>
             <div className="text-[11px] text-amber-700 font-medium">Approaching deadline</div>
           </div>
 
@@ -381,7 +383,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
             <div className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-700" /> Needs Review
             </div>
-            <div className="my-2 text-2xl font-black text-amber-900">{reviewQueue.length}</div>
+            <div className="my-2 text-2xl font-black text-amber-900">{stats.needsReview || reviewQueue.length}</div>
             <div className="text-[11px] text-amber-800 font-medium">Flagged for clinician check</div>
           </div>
 
@@ -390,7 +392,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
             <div className="text-xs font-bold text-red-900 uppercase tracking-wider flex items-center gap-1.5">
               <ClockAlert className="w-3.5 h-3.5 text-red-600" /> Overdue
             </div>
-            <div className="my-2 text-2xl font-black text-red-700">{overdueItems.length}</div>
+            <div className="my-2 text-2xl font-black text-red-700">{stats.overdue || overdueItems.length}</div>
             <div className="text-[11px] text-red-700 font-medium">Deadline lapsed</div>
           </div>
         </div>
@@ -427,100 +429,109 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
           {/* Cards for each priority tier */}
           <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
             {/* 🔴 IMMEDIATE REVIEW TIER */}
-            <div className="p-4 rounded-xl border border-red-200 bg-red-50/40 flex flex-col justify-between h-full">
-              <div>
-                <div className="flex items-center justify-between">
-                  <CareCoordinationPriorityBadge level="immediate-review" size="sm" />
-                  <span className="text-[11px] font-mono text-red-700 font-bold">Priority #1</span>
-                </div>
-                <h3 className="mt-3 text-base font-bold text-slate-900">Arun Kumar</h3>
-                <p className="text-xs text-red-900 font-medium mt-1 leading-snug">
-                  "Documented urgent follow-up / unresolved clinical instruction"
-                </p>
-                <div className="mt-2 text-[11px] text-slate-600">
-                  Target: <strong>Cardiology & Nephrology Date</strong> • Due 15 Oct
-                </div>
-                {/* Source cite */}
-                <div className="mt-2 text-[10px] text-slate-500 font-mono">
-                  Source: Discharge Summary • Page 2 & 4
-                </div>
-              </div>
+            {(() => {
+              const item = priorityList.find((p) => p.level === 'immediate-review') || priorityList[0];
+              return (
+                <div className="p-4 rounded-xl border border-red-200 bg-red-50/40 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <CareCoordinationPriorityBadge level="immediate-review" size="sm" />
+                      <span className="text-[11px] font-mono text-red-700 font-bold">Priority #1</span>
+                    </div>
+                    <h3 className="mt-3 text-base font-bold text-slate-900">{item?.patientName || item?.name || 'Arun Kumar'}</h3>
+                    <p className="text-xs text-red-900 font-medium mt-1 leading-snug">
+                      "{item?.primaryDiagnosis || 'Documented urgent follow-up / unresolved clinical instruction'}"
+                    </p>
+                    <div className="mt-2 text-[11px] text-slate-600">
+                      Target: <strong>{item?.followUp || 'Cardiology Specialist Evaluation'}</strong> • Due {item?.dueDate || '15 Oct'}
+                    </div>
+                    <div className="mt-2 text-[10px] text-slate-500 font-mono">
+                      MRN: {item?.patientId || item?.id || 'MRN-1003'} • Dept: {item?.department || 'Cardiology'}
+                    </div>
+                  </div>
 
-              <button
-                onClick={() => {
-                  const item = priorityList.find((p) => p.id === 'CCP001');
-                  if (item) handlePriorityAction(item);
-                }}
-                className="mt-4 w-full py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                Review Now
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+                  <button
+                    onClick={() => {
+                      if (item) handlePriorityAction(item);
+                    }}
+                    className="mt-4 w-full py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    Review Now
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* 🟠 HIGH FOLLOW-UP PRIORITY TIER */}
-            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between h-full">
-              <div>
-                <div className="flex items-center justify-between">
-                  <CareCoordinationPriorityBadge level="high-priority" size="sm" />
-                  <span className="text-[11px] font-mono text-amber-800 font-bold">Priority #2</span>
-                </div>
-                <h3 className="mt-3 text-base font-bold text-slate-900">Priya Sharma</h3>
-                <p className="text-xs text-amber-950 font-medium mt-1 leading-snug">
-                  "Follow-up deadline approaching"
-                </p>
-                <div className="mt-2 text-[11px] text-slate-600">
-                  Target: <strong>Fasting Blood Glucose & HbA1c</strong> • Due 18 Oct
-                </div>
-                {/* Source cite */}
-                <div className="mt-2 text-[10px] text-slate-500 font-mono">
-                  Source: Discharge Summary • Page 2
-                </div>
-              </div>
+            {(() => {
+              const item = priorityList.find((p) => p.level === 'high-priority') || priorityList[1] || priorityList[0];
+              return (
+                <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <CareCoordinationPriorityBadge level="high-priority" size="sm" />
+                      <span className="text-[11px] font-mono text-amber-800 font-bold">Priority #2</span>
+                    </div>
+                    <h3 className="mt-3 text-base font-bold text-slate-900">{item?.patientName || item?.name || 'Priya Sharma'}</h3>
+                    <p className="text-xs text-amber-950 font-medium mt-1 leading-snug">
+                      "{item?.primaryDiagnosis || 'Follow-up deadline approaching'}"
+                    </p>
+                    <div className="mt-2 text-[11px] text-slate-600">
+                      Target: <strong>{item?.followUp || 'Diagnostic Lab Follow-up'}</strong> • Due {item?.dueDate || '18 Oct'}
+                    </div>
+                    <div className="mt-2 text-[10px] text-slate-500 font-mono">
+                      MRN: {item?.patientId || item?.id || 'MRN-1001'} • Dept: {item?.department || 'Cardiology'}
+                    </div>
+                  </div>
 
-              <button
-                onClick={() => {
-                  const item = priorityList.find((p) => p.id === 'CCP003');
-                  if (item) handlePriorityAction(item);
-                }}
-                className="mt-4 w-full py-2.5 text-xs font-bold text-amber-950 bg-amber-200 hover:bg-amber-300 rounded-xl transition-colors border border-amber-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                Review
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+                  <button
+                    onClick={() => {
+                      if (item) handlePriorityAction(item);
+                    }}
+                    className="mt-4 w-full py-2.5 text-xs font-bold text-amber-950 bg-amber-200 hover:bg-amber-300 rounded-xl transition-colors border border-amber-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    Review
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* 🟢 ROUTINE TIER */}
-            <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col justify-between h-full">
-              <div>
-                <div className="flex items-center justify-between">
-                  <CareCoordinationPriorityBadge level="routine" size="sm" />
-                  <span className="text-[11px] font-mono text-emerald-800 font-bold">Priority #3</span>
-                </div>
-                <h3 className="mt-3 text-base font-bold text-slate-900">Rahul Kumar</h3>
-                <p className="text-xs text-emerald-950 font-medium mt-1 leading-snug">
-                  "Upcoming routine follow-up"
-                </p>
-                <div className="mt-2 text-[11px] text-slate-600">
-                  Target: <strong>Surgical site wound inspection</strong> • Due 22 Oct
-                </div>
-                {/* Source cite */}
-                <div className="mt-2 text-[10px] text-slate-500 font-mono">
-                  Source: Discharge Summary • Page 1
-                </div>
-              </div>
+            {(() => {
+              const item = priorityList.find((p) => p.level === 'routine') || priorityList[2] || priorityList[0];
+              return (
+                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <CareCoordinationPriorityBadge level="routine" size="sm" />
+                      <span className="text-[11px] font-mono text-emerald-800 font-bold">Priority #3</span>
+                    </div>
+                    <h3 className="mt-3 text-base font-bold text-slate-900">{item?.patientName || item?.name || 'Rahul Kumar'}</h3>
+                    <p className="text-xs text-emerald-950 font-medium mt-1 leading-snug">
+                      "{item?.primaryDiagnosis || 'Upcoming routine follow-up'}"
+                    </p>
+                    <div className="mt-2 text-[11px] text-slate-600">
+                      Target: <strong>{item?.followUp || 'Routine Surgical Inspection'}</strong> • Due {item?.dueDate || '22 Oct'}
+                    </div>
+                    <div className="mt-2 text-[10px] text-slate-500 font-mono">
+                      MRN: {item?.patientId || item?.id || 'MRN-1006'} • Dept: {item?.department || 'Orthopedics'}
+                    </div>
+                  </div>
 
-              <button
-                onClick={() => {
-                  const item = priorityList.find((p) => p.id === 'CCP005');
-                  if (item) handlePriorityAction(item);
-                }}
-                className="mt-4 w-full py-2.5 text-xs font-bold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 rounded-xl transition-colors border border-emerald-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                View
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+                  <button
+                    onClick={() => {
+                      if (item) handlePriorityAction(item);
+                    }}
+                    className="mt-4 w-full py-2.5 text-xs font-bold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 rounded-xl transition-colors border border-emerald-300 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    View
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
         )}
@@ -600,11 +611,16 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Users className="w-4 h-4 text-teal-800" /> Discharged Patient Cohort Queue
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <Users className="w-4 h-4 text-teal-800" /> Discharged Patient Cohort Queue
+                </h3>
+                <span className="text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                  {filteredPriorityList.length} Active Cohort Patients
+                </span>
+              </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Centralized registry with explicit Care Coordination Priority indicators
+                Centralized registry with explicit Care Coordination Priority indicators & post-discharge tracking
               </p>
             </div>
 
@@ -617,7 +633,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter patient name..."
+                  placeholder="Filter patient name, MRN, dept..."
                   className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#00e575] focus:ring-1 focus:ring-[#00e575]"
                 />
               </div>
@@ -646,6 +662,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                 <option value="pending">Pending</option>
                 <option value="needs-review">Needs Review</option>
                 <option value="overdue">Overdue</option>
+                <option value="stable">Stable / Up to date</option>
               </select>
             </div>
           </div>
@@ -655,9 +672,9 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-y border-slate-200">
                 <tr>
-                  <th className="py-3 px-4 font-bold">Patient</th>
-                  <th className="py-3 px-4 font-bold">Follow-up</th>
-                  <th className="py-3 px-4 font-bold">Due Date</th>
+                  <th className="py-3 px-4 font-bold">Patient & Department</th>
+                  <th className="py-3 px-4 font-bold">Primary Diagnosis & Discharge</th>
+                  <th className="py-3 px-4 font-bold">Next Follow-up & Due</th>
                   <th className="py-3 px-4 font-bold">Priority</th>
                   <th className="py-3 px-4 font-bold">Status</th>
                   <th className="py-3 px-4 font-bold text-right">Action</th>
@@ -677,23 +694,26 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                 ) : (
                   filteredPriorityList.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                      {/* Patient */}
+                      {/* Patient & Department */}
                       <td className="py-3.5 px-4 align-middle">
-                        <div className="font-bold text-slate-900">{item.patientName}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">ID: {item.patientId}</div>
+                        <div className="font-bold text-slate-900">{item.patientName || item.name}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          ID: <span className="font-semibold text-slate-700">{item.patientId || item.id}</span> • Dept: <span className="text-teal-700 font-medium">{item.department || 'Cardiology'}</span>
+                        </div>
                       </td>
 
-                      {/* Follow-up */}
+                      {/* Primary Diagnosis & Discharge */}
+                      <td className="py-3.5 px-4 align-middle">
+                        <div className="font-semibold text-slate-900 truncate max-w-xs">{item.primaryDiagnosis || item.reason || 'Post-Discharge Recovery'}</div>
+                        <div className="text-[10px] text-slate-500">Discharged: {item.dischargeDate || '-'}</div>
+                      </td>
+
+                      {/* Follow-up & Due Date */}
                       <td className="py-3.5 px-4 align-middle text-slate-700 font-medium">
-                        <div className="font-semibold text-slate-900">{item.followUp}</div>
-                        <div className="text-[10px] text-slate-500 truncate max-w-xs">{item.reason}</div>
-                      </td>
-
-                      {/* Due Date */}
-                      <td className="py-3.5 px-4 align-middle text-slate-600 font-medium whitespace-nowrap">
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-teal-700 shrink-0" />
-                          {item.dueDate}
+                        <div className="font-semibold text-slate-900 truncate max-w-xs">{item.followUp}</div>
+                        <span className="flex items-center gap-1.5 text-[10px] text-teal-700 font-semibold mt-0.5">
+                          <Calendar className="w-3 h-3 text-teal-700 shrink-0" />
+                          Due: {item.dueDate || item.followUpDate || '-'}
                         </span>
                       </td>
 
@@ -717,7 +737,7 @@ export function DoctorDashboard({ defaultTab }: DoctorDashboardProps = {}) {
                               : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200'
                           }`}
                         >
-                          {item.actionLabel}
+                          {item.actionLabel || 'View'}
                         </button>
                       </td>
                     </tr>

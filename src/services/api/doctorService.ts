@@ -92,6 +92,13 @@ export const doctorService = {
     });
   },
 
+  approveExtraction: async (extraction: Record<string, any>, filename?: string): Promise<any> => {
+    return await fetchJson<any>('/api/doctor/documents/approve-extraction', {
+      method: 'POST',
+      body: JSON.stringify({ extraction, filename: filename || "Discharge_Summary.txt" })
+    });
+  },
+
   rejectDocument: async (docId: number, reason?: string): Promise<any> => {
     return await fetchJson<any>(`/api/doctor/documents/${docId}/reject`, {
       method: 'POST',

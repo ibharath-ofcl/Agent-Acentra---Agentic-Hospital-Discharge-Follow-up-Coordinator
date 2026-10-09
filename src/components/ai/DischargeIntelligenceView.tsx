@@ -252,13 +252,19 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
   }, [analysisResult, onShowToast]);
 
   const handleApproveDocument = useCallback(async () => {
-    if (!uploadedDocId) {
-      handleSyncToCarePlan();
-      return;
-    }
     setApprovalStatus('approving');
     try {
-      const res = await doctorService.approveDocument(uploadedDocId);
+      let res;
+      if (uploadedDocId) {
+        res = await doctorService.approveDocument(uploadedDocId);
+      } else if (analysisResult) {
+        res = await doctorService.approveExtraction(analysisResult, uploadedFileName || 'Synthetic_Discharge_Summary.txt');
+        if (res.documentId) setUploadedDocId(res.documentId);
+      } else {
+        handleSyncToCarePlan();
+        setApprovalStatus('idle');
+        return;
+      }
       setApprovalStatus('approved');
       setSyncedToCarePlan(true);
       onShowToast?.(`✓ Approved & persisted to MySQL! Created ${res.tasks_created || res.createdTasksCount || 0} tasks, ${res.appointments_created || 0} appointments.`);
@@ -268,7 +274,7 @@ export const DischargeIntelligenceView: React.FC<DischargeIntelligenceViewProps>
       setAnalysisError(err.message || 'Approval failed.');
       setApprovalStatus('idle');
     }
-  }, [uploadedDocId, handleSyncToCarePlan, loadDocumentsList, onShowToast, onApproved]);
+  }, [uploadedDocId, analysisResult, uploadedFileName, handleSyncToCarePlan, loadDocumentsList, onShowToast, onApproved]);
 
   const handleRejectDocument = useCallback(async () => {
     if (!uploadedDocId) return;
